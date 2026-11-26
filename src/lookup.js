@@ -38,6 +38,25 @@ async function fromUpcItemDb(code) {
   return { name: it.title, brand: it.brand || null, image: (it.images || [])[0] || null, source: 'upcitemdb' };
 }
 
+// barcode-list.ru — Rossiya/MDH tovarlari (Turkiya va O'zbekistonniki ham uchraydi)
+async function fromBarcodeList(code) {
+  const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 7000);
+  try {
+    const r = await fetch(`https://barcode-list.ru/barcode/RU/%D0%9F%D0%BE%D0%B8%D1%81%D0%BA.htm?barcode=${code}`, { signal: ctl.signal, headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)' } });
+    if (!r.ok) return null;
+    const html = await r.text();
+    const m = html.match(/<meta name="description" content="[^"]*?:\s*([^"]+)"/i);
+    if (!m) return null;
+    const dec = (x) => x.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#039;|&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    const names = dec(m[1]).split(';').map((x) => x.replace(/\s+/g, ' ').trim()).filter((x) => x.length > 2);
+    if (!names.length) return null;
+    const cnt = new Map();
+    for (const n of names) { const k = n.toLowerCase(); cnt.set(k, { n, c: (cnt.get(k)?.c || 0) + 1 }); }
+    const best = [...cnt.values()].sort((a, b) => b.c - a.c || b.n.length - a.n.length)[0].n;
+    return { name: best, brand: null, image: null, source: 'barcode-list.ru' };
+  } catch { return null; } finally { clearTimeout(t); }
+}
+
 // O'zbekiston Soliq qo'mitasining yagona elektron katalogi (tasnif.soliq.uz) — mahalliy mahsulotlar ham bor
 async function fromTasnif(code) {
   for (const lang of ['uz', 'ru']) {
@@ -55,13 +74,14 @@ async function lookupBarcode(code) {
   code = String(code || '').replace(/\D/g, '');
   if (code.length < 6 || code.length > 14) return null;
   if (cache.has(code)) return cache.get(code);
-  const [tas, off] = await Promise.all([fromTasnif(code), fromOpenFoodFacts(code)]);
-  let res = tas || off || (await fromUpcItemDb(code)) || null;
+  // tasnif.soliq.uz chet el serverlaridan (Render) javob bermaydi — uni telefon o'zi so'raydi
+  const [off, bl] = await Promise.all([fromOpenFoodFacts(code), fromBarcodeList(code)]);
+  let res = off || bl || (await fromUpcItemDb(code)) || null;
   if (res && !res.image && off?.image) res = { ...res, image: off.image };
-  if (res && !res.image && !off) { const up = await fromUpcItemDb(code); if (up?.image) res = { ...res, image: up.image }; }
-  cache.set(code, res);
+  if (res && !res.image && !off && res.source !== 'upcitemdb') { const up = await fromUpcItemDb(code); if (up?.image) res = { ...res, image: up.image }; }
+  if (res) cache.set(code, res);
   if (cache.size > 500) cache.delete(cache.keys().next().value);
   return res;
 }
 
-module.exports = { lookupBarcode };
+module.exports = { lookupBarcode, fromTasnif };

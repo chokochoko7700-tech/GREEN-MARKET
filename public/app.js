@@ -518,12 +518,12 @@ function blockHtml(b) {
   const { products } = S.catalog;
   const list = b.link_type === 'category' ? products.filter((p) => p.category_id === b.link_id && p.in_stock) : [];
   const goTo = b.link_type === 'category' ? `cat/${b.link_id}` : '';
-  const feats = (b.link_type === 'product' && product(b.link_id) ? [product(b.link_id)] : list).slice(0, 4);
+  const feats = (b.link_type === 'product' && product(b.link_id) ? [product(b.link_id)] : list.filter((p) => p.image)).slice(0, 4);
   return `<div class="block" id="blk${b.id}" style="background:${e(b.color || '#e11d2a')}">
     ${goTo ? `<button class="all press" data-go="${goTo}">${tr('all')} ${ic('chevron-right')}</button>` : ''}
-    <div class="head"><b class="logo">${e(b.title || '')}</b>
-      <div class="feats">${feats.map((p, i) => `<div class="feat ${i ? '' : 'on'}" data-p="${p.id}"><div class="t"><small>${e(pname(p))}</small><strong>${fmt(p.price)} ${tr('sum')}</strong></div>
-        ${p.image ? `<img class="lz" src="${e(p.image)}" alt="">` : ''}</div>`).join('')}</div>
+    <div class="head">${b.image ? `<img class="blogo" src="${e(b.image)}" alt="${e(b.title || '')}">` : `<b class="logo">${e(b.title || '')}</b>`}
+      <div class="feats">${feats.map((p, i) => `<div class="feat ${i ? '' : 'on'}" data-go="p/${p.id}"><div class="t"><small>${e(pname(p))}</small><strong>${fmt(p.price)} ${tr('sum')}</strong></div>
+        ${p.image ? `<div class="fpic"><img src="${e(p.image)}" alt=""></div>` : ''}</div>`).join('')}</div>
       ${feats.length > 1 ? `<div class="bdots">${feats.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
     </div>
     ${list.length ? `<div class="h-scroll">${list.slice(0, 10).map(pcard).join('')}</div>` : ''}
@@ -531,15 +531,21 @@ function blockHtml(b) {
 }
 function startBlock(b) {
   const el = $('#blk' + b.id); if (!el) return;
-  const feats = $$('.feat', el), dots = $$('.bdots i', el);
+  const feats = $$('.feat', el), dots = $$('.bdots i', el), head = $('.head', el);
   if (feats.length < 2) return;
-  let i = 0;
-  timers.push(setInterval(() => {
-    if (document.hidden) return;
-    i = (i + 1) % feats.length;
-    feats.forEach((f, k) => f.classList.toggle('on', k === i));
+  let i = 0, last = Date.now();
+  const show = (n) => {
+    const prev = i; i = (n + feats.length) % feats.length; last = Date.now();
+    feats.forEach((f, k) => { f.classList.toggle('on', k === i); f.classList.toggle('was', k === prev && k !== i); });
     dots.forEach((d, k) => d.classList.toggle('on', k === i));
-  }, 3200));
+  };
+  let x0 = null;
+  head.addEventListener('touchstart', (ev) => { x0 = ev.touches[0].clientX; }, { passive: true });
+  head.addEventListener('touchend', (ev) => {
+    if (x0 === null) return; const dx = ev.changedTouches[0].clientX - x0; x0 = null;
+    if (Math.abs(dx) > 40) { hap('light'); show(i + (dx < 0 ? 1 : -1)); }
+  });
+  timers.push(setInterval(() => { if (!document.hidden && Date.now() - last > 3400) show(i + 1); }, 400));
 }
 function autoScroll(row) {
   if (!row || row.children.length < 2) return;
@@ -1403,11 +1409,35 @@ function scannerSheet(title = 'Skaner') {
     });
   });
 }
+// Barkod nomi: avval server (xalqaro bazalar), topilmasa telefonning o'zi O'zbekiston katalogidan (tasnif.soliq.uz) so'raydi
+async function tasnifLookup(code) {
+  const T = 'https://tasnif.soliq.uz/api/cls-api/mxik/search/by-params';
+  for (const q of [`gtin=${code}`, `barcode=${code}`]) {
+    for (const lang of ['uz', 'ru']) {
+      const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 5000);
+      try {
+        const r = await fetch(`${T}?${q}&page=0&size=5&lang=${lang}`, { signal: ctl.signal });
+        if (!r.ok) continue;
+        const j = await r.json();
+        const it = (j?.data?.content || j?.content || j?.data || [])[0];
+        const name = it && (it.mxikName || it.name || it.attributeName);
+        if (name) return { name: String(name).replace(/\s+/g, ' ').trim(), brand: it.brandName || null, image: null, source: 'tasnif.soliq.uz' };
+      } catch { /* CORS yoki tarmoq */ } finally { clearTimeout(t); }
+    }
+  }
+  return null;
+}
+async function lookupCode(code) {
+  const r = await api('/api/admin/lookup?code=' + encodeURIComponent(code));
+  if (r.type === 'new' && !r.suggestion && /^\d{8,14}$/.test(code)) r.suggestion = await tasnifLookup(code);
+  return r;
+}
 async function scanFlow() {
   const code = await scannerSheet();
   if (!code) return;
   let r;
-  try { r = await api('/api/admin/lookup?code=' + encodeURIComponent(code)); } catch (err) { return toast(err.message, 'error'); }
+  toast('Qidirilmoqda…');
+  try { r = await lookupCode(code); } catch (err) { return toast(err.message, 'error'); }
   if (r.type === 'customer') return customerSheet(r.customer);
   if (r.type === 'product') { toast('Mahsulot topildi'); return productForm(r.product); }
   notFoundSheet(r);
@@ -1547,7 +1577,7 @@ function admBanners(box) {
   const form = (b) => formSheet('banners', b ? { ...b, link: `${b.link_type}:${b.link_id ?? ''}` } : null, [
     { k: 'style', t: 'seg', label: 'Turi', opts: [['card', 'Promo karta'], ['block', 'Rangli blok']], def: 'card' },
     { k: 'title', label: 'Sarlavha', req: true }, { k: 'subtitle', label: 'Kichik matn' },
-    { k: 'image', t: 'image', label: 'Rasm', small: true },
+    { k: 'image', t: 'image', label: 'Rasm (rangli blokda — brend logotipi, shaffof PNG)', small: true },
     { k: 'color', t: 'color', label: 'Fon rangi', def: '#eaf6ec' },
     { k: 'link', t: 'select', label: 'Bosilganda / blok mahsulotlari', opts: linkOpts, def: 'none:' },
     { k: 'stories', t: 'stories', label: 'Istoriya slaydlari' },
@@ -1681,7 +1711,7 @@ function formSheet(entity, item, fields, transform, preset = {}) {
       const hint = $('#bcHint', root); if (!code || code.length < 6) return;
       hint.textContent = 'Qidirilmoqda…';
       try {
-        const r = await api('/api/admin/lookup?code=' + encodeURIComponent(code));
+        const r = await lookupCode(code);
         if (r.type === 'product' && (!item || r.product.id !== item.id)) { hint.innerHTML = `⚠️ Bu barkod allaqachon bor: <b>${e(r.product.name_uz)}</b>`; return; }
         const sg = r.suggestion; const nm = root.querySelector('[data-k="name_uz"]');
         if (sg?.name) {
