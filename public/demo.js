@@ -21,6 +21,8 @@
         { id: 4, name_uz: 'Sneklar', grp: 'Shirinliklar va gazaklar', image: pimg('🍿', '#fff0e6'), icon: 'lucide:cookie' },
       ],
       banners: [
+        { id: 15, title: 'Issiq non', subtitle: 'Har tong pechdan yangi', style: 'card', color: '#ffffff', image: '/img/stories/t_non.jpg', story_title: 'Issiq non', link_type: 'category', link_id: 2, stories: [{ image: '/img/stories/02_kruassan_va_qahva.jpg', poster: true }, { image: '/img/stories/03_yangi_patir.jpg', poster: true }] },
+        { id: 16, title: "Bonus to'plang", subtitle: 'Har bir xariddan bonus ballar', style: 'card', color: '#ffffff', image: '/img/stories/t_bonus.jpg', story_title: 'Bonuslar', link_type: 'none', stories: [{ image: '/img/stories/04_bonuslar.jpg', poster: true }, { image: '/img/stories/05_ball_toplang.jpg', poster: true }, { image: '/img/stories/06_qr_karta.jpg', poster: true }] },
         { id: 1, style: 'card', color: '#eaf6ec', image: pimg('🛍️', 'transparent'), title: 'Bonus to\'plang', subtitle: 'Har bir xariddan bonus ballar', story_title: 'Bonuslar', link_type: 'none',
           stories: [{ title: 'Kartangizni ko\'rsating', text: 'Kassada QR-kodni skanerlating', image: pimg('💳', 'transparent') }, { title: 'Ball to\'plang', text: 'Har bir xariddan bonus ballar', image: pimg('🛍️', 'transparent') }] },
         { id: 2, style: 'card', color: '#fff3e3', image: pimg('🫓', 'transparent'), title: 'Har tong yangi', subtitle: 'Issiq non', story_title: 'Issiq non', link_type: 'category', link_id: 1,
