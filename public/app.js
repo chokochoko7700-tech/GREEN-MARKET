@@ -243,6 +243,7 @@ function applyTheme() {
   const pref = S.me?.theme || local.get('theme', 'light');
   const mode = pref === 'auto' ? (tg?.colorScheme || 'light') : pref;
   document.documentElement.dataset.theme = mode;
+  applyLook();
   const accent = setting('theme', {}).accent;
   if (accent && /^#[0-9a-f]{6}$/i.test(accent)) document.documentElement.style.setProperty('--accent', accent);
   const bg = mode === 'dark' ? '#0e0e10' : '#ffffff';
@@ -342,7 +343,7 @@ function refreshCards(id) {
 }
 function loyaltyCard() {
   const li = levelInfo(); const coins = S.me?.coins || 0;
-  return `<button class="lcard press" data-go="card">${wavesSvg()}
+  return `<button class="lcard press" data-go="card">${decor()}
     <div class="l"><div class="lvl">${e(tr('lvl', li.cur.name, li.cur.pct))}</div>
       <div class="ttl">${coins ? `${fmt(coins)} ${tr('balls')}` : tr('collect')}</div>
       <div class="hint">${S.me ? tr('cardHint') : tr('showCode')}</div>
@@ -385,11 +386,116 @@ const ACTIONS = {
   write: () => writeSheet(tr('writeUs'), tr('msgPh'), (txt) => txt, tr('sent')),
   feedback: () => feedbackSheet(),
   lang: () => choiceSheet(tr('lang'), [['uz', 'O\'zbekcha'], ['ru', 'Русский']], S.lang, (v) => { S.lang = v; local.set('lang', v); savePref({ lang: v }); }),
-  theme: () => {
-    const th = S.me?.theme || local.get('theme', 'light');
-    choiceSheet(tr('theme'), ['light', 'dark', 'auto'].map((x) => [x, tr('th_' + x)]), th, (v) => { local.set('theme', v); if (S.me) S.me.theme = v; applyTheme(); savePref({ theme: v }); });
-  },
+  theme: () => go('theme'),
+  scan: () => customerScan(),
+  addr: () => addrSheet(),
 };
+
+Object.assign(L.uz, {
+  scanTitle: 'Mahsulotni skanerlang', scanHint: 'Kamerani mahsulotning shtrix-kodiga qarating', scanNo: 'Katalogda bunday shtrix-kodli mahsulot yo\'q. Boshqasini skanerlab ko\'ring.',
+  addrChange: 'Manzilni o\'zgartirish', addrNew: 'Yangi manzil qo\'shish', addrCur: 'Joriy joylashuvdan foydalanish', addrCurSub: 'Joylashuv xizmatlarini yoqing',
+  findT: 'Mahsulotni toping', findP: 'Nomi yoki brendini yozing — narxlar sizga eng yaqin do\'kon bo\'yicha ko\'rsatiladi.', toProduct: 'Mahsulotga qaytish',
+  lookPrev: 'Bosh sahifa va profil shunday ko\'rinadi', bgT: 'Fon', toneT: 'Rang', viewT: 'Ko\'rinish', resetLook: 'Standart ko\'rinishga qaytarish',
+  bg_plain: 'Oddiy', bg_wave: 'To\'lqin', bg_silk: 'Ipak', bg_ribbon: 'Lenta', bg_glow: 'Nur', bg_rings: 'Halqalar', bg_pattern: 'Naqsh',
+  tn_graphite: 'Grafit', tn_gold: 'Oltin', tn_bronze: 'Bronza', vw_auto: 'Tizim bo\'yicha', vw_light: 'Yorug\'', vw_dark: 'Qorong\'i',
+});
+Object.assign(L.ru, {
+  scanTitle: 'Отсканируйте товар', scanHint: 'Наведите камеру на штрих-код товара', scanNo: 'Товара с таким штрих-кодом нет в каталоге. Попробуйте другой.',
+  addrChange: 'Изменить адрес', addrNew: 'Добавить новый адрес', addrCur: 'Использовать текущее местоположение', addrCurSub: 'Включите службы геолокации',
+  findT: 'Найдите товар', findP: 'Введите название или бренд — цены показаны по ближайшему магазину.', toProduct: 'Вернуться к товару',
+  lookPrev: 'Так будут выглядеть главная и профиль', bgT: 'Фон', toneT: 'Цвет', viewT: 'Оформление', resetLook: 'Вернуть стандартный вид',
+  bg_plain: 'Обычный', bg_wave: 'Волна', bg_silk: 'Шёлк', bg_ribbon: 'Лента', bg_glow: 'Свет', bg_rings: 'Кольца', bg_pattern: 'Узор',
+  tn_graphite: 'Графит', tn_gold: 'Золото', tn_bronze: 'Бронза', vw_auto: 'Как в системе', vw_light: 'Светлое', vw_dark: 'Тёмное',
+});
+
+/* ---------- Mavzu: fon va rang ---------- */
+const LOOK_DEF = { bg: 'wave', tone: 'graphite' };
+const BGS = ['plain', 'wave', 'silk', 'ribbon', 'glow', 'rings', 'pattern'];
+const TONES = { graphite: null, gold: '#d4a64a', bronze: '#c0703c' };
+const look = () => ({ ...LOOK_DEF, ...local.get('look', {}) });
+let decorN = 0;
+function decor(kind = look().bg) {
+  const id = 'd' + (++decorN);
+  const wrap = (inner, defs = '') => `<svg class="decor" viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs>${defs}</defs>${inner}</svg>`;
+  if (kind === 'plain') return '';
+  if (kind === 'wave') {
+    let p = ''; for (let i = 0; i < 28; i++) { const o = i * 6; p += `<path d="M-20 ${210 + o} C 110 ${70 + o}, 230 ${330 - o * .4}, 430 ${-10 + o * .6}"/>`; }
+    return wrap(`<g fill="none" stroke="var(--tone)" stroke-opacity=".14" stroke-width="1">${p}</g>`);
+  }
+  if (kind === 'silk') return wrap(`<g filter="url(#${id})" fill="var(--tone)"><path opacity=".28" d="M-40 230 C 80 120 200 260 440 60 L 440 120 C 220 300 90 170 -40 290Z"/><path opacity=".18" d="M120 -20 C 220 80 300 40 440 160 L 440 210 C 290 90 210 150 90 -20Z"/></g>`, `<filter id="${id}" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="16"/></filter>`);
+  if (kind === 'ribbon') {
+    let p = ''; for (let i = 0; i < 16; i++) { const o = i * 2.2; p += `<path d="M260 ${-30 + o} C 420 ${80 + o}, 240 ${200 + o}, 380 ${330 + o}" stroke-opacity="${(0.05 + (i % 8) * 0.03).toFixed(2)}"/>`; }
+    return wrap(`<g fill="none" stroke="var(--tone)" stroke-width="1.4">${p}</g>`);
+  }
+  if (kind === 'glow') return wrap(`<ellipse cx="330" cy="30" rx="230" ry="170" fill="url(#${id})"/>`, `<radialGradient id="${id}"><stop offset="0" stop-color="var(--tone)" stop-opacity=".45"/><stop offset=".55" stop-color="var(--tone)" stop-opacity=".12"/><stop offset="1" stop-color="var(--tone)" stop-opacity="0"/></radialGradient>`);
+  if (kind === 'rings') { let c = ''; for (let r = 30; r < 330; r += 22) c += `<circle cx="360" cy="10" r="${r}"/>`; return wrap(`<g fill="none" stroke="var(--tone)" stroke-opacity=".13" stroke-width="1.2">${c}</g>`); }
+  if (kind === 'pattern') return wrap(`<rect width="400" height="300" fill="url(#${id})"/>`, `<pattern id="${id}" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect x="8" y="8" width="6" height="6" rx="1.5" fill="var(--tone)" fill-opacity=".12"/></pattern>`);
+  return '';
+}
+function applyLook() {
+  const l = look(); const root = document.documentElement;
+  root.dataset.tone = l.tone;
+  if (TONES[l.tone]) root.style.setProperty('--tone', TONES[l.tone]); else root.style.removeProperty('--tone');
+}
+function themePage(v) {
+  const l = look(); const view = S.me?.theme || local.get('theme', 'light');
+  const promo = (S.catalog?.banners || []).find((b) => (b.style || 'card') === 'card');
+  v.innerHTML = navbar(tr('theme')) + `
+    <div class="tp-frame"><div class="tp-prev"><div class="tp-inner">
+      <div class="home-decor">${decor()}</div>
+      <div class="home-head"><div class="where"><small>${tr('welcome')}</small><b><span>${e(S.me?.address || tr('pickAddr'))}</span>${ic('chevron-down')}</b></div><span class="cbtn">${ic('bell')}</span></div>
+      <div class="search-line"><span class="search-pill">${ic('search')}${tr('search')}</span><span class="sq-btn">${ic('scan-line')}</span></div>
+      ${loyaltyCard()}
+      ${promo ? `<div class="promo-row">${promoCard(promo, 0)}</div>` : ''}
+    </div></div></div>
+    <p class="muted tp-cap">${tr('lookPrev')}</p>
+    <div class="label">${tr('bgT')}</div>
+    <div class="sw-row">${BGS.map((k) => `<button class="sw press ${l.bg === k ? 'on' : ''}" data-bg="${k}"><span class="sw-box">${decor(k)}${l.bg === k ? `<i>${ic('check')}</i>` : ''}</span><small>${tr('bg_' + k)}</small></button>`).join('')}</div>
+    <div class="label">${tr('toneT')}</div>
+    <div class="tn-row">${Object.keys(TONES).map((k) => `<button class="tn press ${l.tone === k ? 'on' : ''}" data-tone="${k}"><span class="tn-dot tn-${k}">${l.tone === k ? ic('check') : ''}</span><small>${tr('tn_' + k)}</small></button>`).join('')}</div>
+    ${l.bg !== LOOK_DEF.bg || l.tone !== LOOK_DEF.tone ? `<button class="reset-look press" id="rstLook">${ic('rotate-ccw')}${tr('resetLook')}</button>` : ''}
+    <div class="label">${tr('viewT')}</div>
+    <div class="rows"><button class="row" id="vwBtn">${ic(view === 'dark' ? 'moon' : view === 'light' ? 'sun' : 'smartphone')}<span class="tx">${tr('vw_' + view)}</span><span class="chev">${ic('chevron-right')}</span></button></div>
+    <div style="height:110px"></div>`;
+  fillQr(v); animateProg(v);
+  const set = (patch) => { hap('light'); local.set('look', { ...look(), ...patch }); applyLook(); const y = scrollY; themePage(v); scrollTo(0, y); };
+  v.querySelectorAll('[data-bg]').forEach((b) => b.onclick = () => set({ bg: b.dataset.bg }));
+  v.querySelectorAll('[data-tone]').forEach((b) => b.onclick = () => set({ tone: b.dataset.tone }));
+  const r = $('#rstLook'); if (r) r.onclick = () => set({ ...LOOK_DEF });
+  $('#vwBtn').onclick = () => choiceSheet(tr('viewT'), ['auto', 'light', 'dark'].map((x) => [x, tr('vw_' + x)]), view, (val) => {
+    local.set('theme', val); if (S.me) S.me.theme = val; applyTheme(); savePref({ theme: val });
+  });
+}
+
+/* ---------- Mijoz uchun: mahsulotni skanerlash, manzil ---------- */
+const byBarcode = (c) => { const d = String(c).replace(/\D/g, ''); return d ? (S.catalog?.products || []).find((p) => p.barcode && String(p.barcode).replace(/\D/g, '') === d) : null; };
+async function customerScan() {
+  if (!S.catalog) return;
+  const code = await scannerSheet(tr('scanTitle'), { noTg: true, hint: tr('scanHint'), check: (c) => (byBarcode(c) ? true : tr('scanNo')) });
+  const p = code && byBarcode(code);
+  if (p) setTimeout(() => go('p/' + p.id), 300);
+}
+function addrSheet() {
+  openSheet(sheetHead(tr('addrChange')) + `<div class="rows" style="padding:0">
+    <button class="row" id="aNew">${ic('plus')}<span class="tx">${tr('addrNew')}</span></button>
+    <button class="row" id="aCur">${ic('navigation')}<span class="tx">${tr('addrCur')}<small>${tr('addrCurSub')}</small></span></button></div>`, (root) => {
+    $('#aNew', root).onclick = () => { closeSheet(); go('addr'); };
+    $('#aCur', root).onclick = () => {
+      closeSheet();
+      locate(async (lat, lng) => {
+        if (!S.me) return toast(tr('openInBot'), 'error');
+        let address = '';
+        try {
+          const j = await (await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&accept-language=${S.lang}`)).json();
+          const a = j.address || {};
+          address = [a.road || a.neighbourhood || a.suburb, a.house_number].filter(Boolean).join(', ') || (j.display_name || '').split(',').slice(0, 2).join(',');
+        } catch {}
+        try { S.me = await api('/api/me', { method: 'PATCH', body: { lat, lng, address: address || S.me.address || '' } }); hap('success'); toast(tr('saved'), 'success'); render(true); }
+        catch (err) { toast(err.message, 'error'); }
+      });
+    };
+  });
+}
 
 /* ---------------- ROUTER ---------------- */
 const TABS = ['home', 'catalog', 'stores', 'profile'];
@@ -430,7 +536,7 @@ function render(silent = false) {
   const v = $('#view');
   v.classList.toggle('bare', !isTab);
   if (!silent) { v.classList.remove('anim-fade', 'anim-push', 'anim-pop'); void v.offsetWidth; v.classList.add(anim); window.scrollTo(0, 0); }
-  const R = { home, catalog, cat: category, p: productPage, fav: favPage, list: shopList, deals, recipes, recipe, search, stores, profile, cart, checkout, card, purchases, edit, notif, settings, addr, info, success, intro, admin };
+  const R = { home, catalog, cat: category, p: productPage, fav: favPage, list: shopList, deals, recipes, recipe, search, stores, profile, cart, checkout, card, purchases, edit, notif, settings, addr, info, success, intro, admin, theme: themePage };
   (R[page] || home)(v, a, b);
 }
 // Telegram "Orqaga" tugmasi: faqat ichki sahifalarda ko'rinadi
@@ -484,12 +590,13 @@ function home(v) {
   const first = secs.slice(0, 2), rest = secs.slice(2);
   v.innerHTML = `
     <div class="home-head">
-      <button class="where press" data-go="addr"><small>${tr('welcome')}</small><b><span>${e(me.address || tr('pickAddr'))}</span>${ic('chevron-down')}</b></button>
+      <button class="where press" data-act="addr"><small>${tr('welcome')}</small><b><span>${e(me.address || tr('pickAddr'))}</span>${ic('chevron-down')}</b></button>
       <button class="cbtn press" data-go="search">${ic('search')}</button>
-      <button class="cbtn press" data-act="card">${ic('scan-line')}</button>
-      <button class="cbtn press" data-go="purchases">${ic('bell')}</button>
+      <button class="cbtn press" data-act="scan">${ic('scan-line')}</button>
+      <button class="cbtn press" data-go="notif">${ic('bell')}</button>
     </div>
-    <div class="search-line"><button class="search-pill press" data-go="search">${ic('search')}${tr('search')}</button><button class="sq-btn press" data-act="card">${ic('scan-line')}</button></div>
+    <div class="home-decor">${decor()}</div>
+    <div class="search-line"><button class="search-pill press" data-go="search">${ic('search')}${tr('search')}</button><button class="sq-btn press" data-act="scan">${ic('scan-line')}</button></div>
     ${loyaltyCard()}
     ${promos.length ? `<div class="promo-row" id="promos">${promos.map((b, i) => promoCard(b, i)).join('')}</div>` : ''}
     <div class="shortcuts">${SHORTCUTS.map(([to, icon, key], i) => `<button class="sc press" data-go="${to}" style="animation-delay:${i * 50}ms"><img src="${fe(icon)}" alt=""><span>${tr(key)}</span></button>`).join('')}</div>
@@ -738,23 +845,22 @@ function recipe(v, id) {
 
 function search(v) {
   if (needCatalog(v)) return;
-  v.innerHTML = `<div class="navbar"><div class="search-row"><label class="search-pill">${ic('search')}<input id="q" type="search" placeholder="${tr('search')}" autocomplete="off" enterkeyhint="search"></label><button class="cancel" data-back>${tr('cancel')}</button></div></div><div id="sres"></div>`;
-  const q = $('#q');
+  v.innerHTML = `<div class="navbar"><div class="search-row"><button class="pp-btn sb press" data-back>${ic('chevron-left')}</button><label class="search-pill">${ic('search')}<input id="q" type="search" placeholder="${tr('search')}" autocomplete="off" enterkeyhint="search"><button class="qx" id="qx" hidden>${ic('circle-x')}</button></label><button class="sq-btn press" data-act="scan">${ic('scan-line')}</button></div></div><div id="sres"></div>`;
+  const q = $('#q'); let tmr = null;
+  const skel = () => `<div class="p-grid">${Array.from({ length: 9 }, () => '<div class="skel-card"><i></i><b></b><b class="s"></b></div>').join('')}</div>`;
   const draw = () => {
     const s = q.value.trim().toLowerCase(); const box = $('#sres');
-    if (!s) {
-      box.innerHTML = `<div class="pad chips" style="margin:6px 0 18px">${S.catalog.categories.slice(0, 10).map((c) => `<button class="chip" data-q="${e(cname(c))}">${e(cname(c))}</button>`).join('')}</div>
-        <div class="p-grid">${(S.catalog.products.filter((p) => p.popular).length ? S.catalog.products.filter((p) => p.popular) : S.catalog.products).slice(0, 12).map(pcard).join('')}</div>`;
-      box.querySelectorAll('[data-q]').forEach((b) => b.onclick = () => { q.value = b.dataset.q; draw(); });
-      return;
-    }
+    $('#qx').hidden = !s;
+    if (!s) { box.innerHTML = `<div class="s-empty"><div class="ic">${ic('search')}</div><b>${tr('findT')}</b><p>${tr('findP')}</p></div>`; return; }
     const cats = S.catalog.categories.filter((c) => `${c.name_uz} ${c.name_ru || ''}`.toLowerCase().includes(s));
-    const prods = S.catalog.products.filter((p) => `${p.name_uz} ${p.name_ru || ''}`.toLowerCase().includes(s));
+    const prods = S.catalog.products.filter((p) => `${p.name_uz} ${p.name_ru || ''} ${p.barcode || ''}`.toLowerCase().includes(s));
     if (!cats.length && !prods.length) { box.innerHTML = emptyState('search-x', tr('nothing'), ''); return; }
     box.innerHTML = `${cats.length ? `<div class="rows" style="margin-bottom:10px">${cats.map((c) => `<button class="row" data-go="cat/${c.id}"><span class="tx">${e(cname(c))}</span><span class="chev">${ic('chevron-right')}</span></button>`).join('')}</div>` : ''}
-      <div class="p-grid">${prods.map(pcard).join('')}</div>`;
+      <div class="p-grid fade-in">${prods.map(pcard).join('')}</div>`;
   };
-  q.oninput = draw; q.onkeydown = (ev) => { if (ev.key === 'Enter') q.blur(); };
+  q.oninput = () => { clearTimeout(tmr); if (!q.value.trim()) return draw(); $('#qx').hidden = false; $('#sres').innerHTML = skel(); tmr = setTimeout(draw, 320); };
+  q.onkeydown = (ev) => { if (ev.key === 'Enter') q.blur(); };
+  $('#qx').onclick = () => { q.value = ''; draw(); q.focus(); };
   draw(); setTimeout(() => q.focus(), 350);
 }
 
@@ -851,17 +957,23 @@ function productPage(v, id) {
     <div class="pp-body">
       <h1>${e(pname(p))}</h1>
       <div class="pp-price">${fmt(p.price)} ${tr('sum')}${p.unit === 'kg' ? `<small> / ${tr('kg')}</small>` : ''}${disc ? `<s>${fmt(p.old_price)}</s>` : ''}</div>
-      ${p.in_stock ? `<div id="qtyBox">${qtyHtml(p, st)}</div>` : `<div class="note">${ic('info')}<span>${tr('soldOut')}</span></div>`}
+      <div class="pp-ball">${ic('coins')}+${fmt(Math.floor((p.price * (levelInfo().cur.pct || 0)) / 100))} ${tr('balls')}</div>
+      ${p.in_stock ? `<div id="qtyBox">${qtyHtml(p, st)}</div>` : `<p class="pp-out">${tr('soldOut')}</p>`}
       ${pdesc(p) ? `<h3>${tr('aboutProduct')}</h3><p class="muted" style="line-height:1.55;margin:0 0 8px">${e(pdesc(p))}</p>` : ''}
     </div>
     ${similar.length ? `<div class="sec" style="padding-top:12px"><div class="sec-h"><b style="font-size:20px">${tr('similar')}</b></div><div class="p-grid">${similar.map(pcard).join('')}</div></div>` : ''}
     <div style="height:96px"></div>
+    <button class="backpill" id="toProd">${tr('toProduct')}</button>
     ${p.in_stock ? `<div class="paybar"><div class="sum"><b id="ppTotal"></b><small id="ppSub"></small></div><button class="btn" id="ppAdd"></button></div>` : ''}`;
   $('#ppFav').onclick = () => {
     hap('light'); S.fav = isFav(p.id) ? S.fav.filter((x) => x !== p.id) : [p.id, ...S.fav]; cloud.set('fav', S.fav);
     $('#ppFav').innerHTML = ic(isFav(p.id) ? 'mdi:heart' : 'heart'); $('#ppFav').classList.toggle('on', isFav(p.id));
   };
   $('#ppFav').classList.toggle('on', isFav(p.id));
+  const bp = $('#toProd');
+  const onSc = () => { if (!bp.isConnected) return removeEventListener('scroll', onSc); bp.classList.toggle('show', scrollY > innerHeight * 0.9); };
+  addEventListener('scroll', onSc, { passive: true });
+  bp.onclick = () => { hap('light'); scrollTo({ top: 0, behavior: 'smooth' }); };
   $('#ppShare').onclick = () => {
     const bot = tg?.initDataUnsafe?.receiver?.username;
     const text = `${pname(p)} — ${fmt(p.price)} ${tr('sum')}`;
@@ -962,6 +1074,7 @@ function profile(v) {
   const row = (icon, text, attrs, right = `<span class="chev">${ic('chevron-right')}</span>`) => `<button class="row" ${attrs}>${ic(icon)}<span class="tx">${text}</span>${right}</button>`;
   const th = me.theme || local.get('theme', 'light');
   v.innerHTML = `
+    <div class="home-decor p-decor">${decor()}</div>
     <div class="p-head"><button class="ava press" id="ava">${ph ? `<img src="${e(ph)}" alt="">` : e(name[0].toUpperCase())}</button>
       <div class="tx"><b>${e(name)}</b><small>${e(me.phone || '')}</small></div>
       <button class="ghost-pill press" data-go="edit">${ic('pencil')}${tr('edit')}</button></div>
@@ -975,7 +1088,7 @@ function profile(v) {
     <div class="rows">
       ${row('user-pen', tr('editProfile'), 'data-go="edit"')}
       ${row('bell', tr('notifs'), 'data-go="notif"')}
-      ${row('palette', tr('theme'), 'data-act="theme"', `<span class="val">${tr('th_' + th)}</span><span class="chev">${ic('chevron-right')}</span>`)}
+      ${row('palette', tr('theme'), 'data-go="theme"', `<span class="val">${tr('bg_' + look().bg)}</span><span class="chev">${ic('chevron-right')}</span>`)}
       ${row('settings', tr('settings'), 'data-go="settings"')}
       ${row('circle-help', tr('help'), 'data-act="help"')}
       ${row('star', tr('feedback'), 'data-act="feedback"')}
@@ -1332,17 +1445,29 @@ function admHome(box) {
 
 /* ---------- Skaner (kamera + ZXing, iPhone'da ham shtrix-kod o'qiydi) ---------- */
 let zxLib = null;
-function scannerSheet(title = 'Skaner') {
+function scannerSheet(title = 'Skaner', opts = {}) {
   return new Promise((resolve) => {
     let done = false, stream = null, timer = null, track = null;
     const stop = () => { clearInterval(timer); try { stream?.getTracks().forEach((t) => t.stop()); } catch {} };
-    const finish = (code) => { if (done) return; done = true; stop(); closeSheet(); resolve(code ? String(code).trim() : null); };
+    let rej = '', rejAt = 0;
+    const finish = (code) => {
+      if (done) return;
+      if (code && opts.check) {
+        const c = String(code).trim(); const r = opts.check(c);
+        if (r !== true) {
+          if (c === rej && Date.now() - rejAt < 2500) return;
+          rej = c; rejAt = Date.now(); hap('error');
+          const m = $('#scanNote'); if (m) { m.textContent = r; m.classList.add('show'); clearTimeout(m._t); m._t = setTimeout(() => m.classList.remove('show'), 2600); }
+          return;
+        }
+      }
+      done = true; stop(); closeSheet(); resolve(code ? String(code).trim() : null); };
     openSheet(`<div style="text-align:center"><h2 style="margin:4px 0 2px;font-size:22px;font-weight:800">${e(title)}</h2>
-      <p class="muted" style="margin:0 0 14px;font-size:14px">Shtrix-kodni ramka ichiga, 15–20 sm masofada tuting</p></div>
+      <p class="muted" style="margin:0 0 14px;font-size:14px">${e(opts.hint || 'Shtrix-kodni ramka ichiga, 15–20 sm masofada tuting')}</p></div>
       <div class="scanbox"><video id="scanVid" playsinline muted autoplay></video><div class="scanframe"><i></i></div>
-        <div class="scanmsg" id="scanMsg">Kamera ochilmoqda…</div><button class="torch" id="torch" hidden>${ic('flashlight')}</button></div>
+        <div class="scanmsg" id="scanMsg">Kamera ochilmoqda…</div><button class="torch" id="torch" hidden>${ic('flashlight')}</button><div class="scan-note" id="scanNote"></div></div>
       <div class="search-line" style="padding:12px 0 0"><label class="search-pill">${ic('keyboard')}<input id="manCode" inputmode="numeric" placeholder="Kodni qo'lda kiriting" enterkeyhint="go"></label><button class="sq-btn" id="manGo">${ic('arrow-right')}</button></div>
-      ${tg?.showScanQrPopup ? `<button class="btn ghost" id="tgQr" style="margin-top:10px">${ic('qr-code')}Mijoz QR — Telegram skaneri</button>` : ''}
+      ${!opts.noTg && tg?.showScanQrPopup ? `<button class="btn ghost" id="tgQr" style="margin-top:10px">${ic('qr-code')}Mijoz QR — Telegram skaneri</button>` : ''}
       <button class="btn text" data-close>Orqaga</button>`, async (root) => {
       const man = () => { const c = $('#manCode', root).value.trim(); if (c) finish(c); };
       $('#manGo', root).onclick = man;

@@ -587,3 +587,68 @@ img[src*="api.iconify.design"] { object-fit: contain !important; padding: 13%; }
 /* Open Food Facts qadoq rasmlari oq fonda, to'liq ko'rinadi */
 img[src*="openfoodfacts"] { object-fit: contain !important; padding: 8%; background: #fff; }
 .pp-hero img[src*="openfoodfacts"] { padding: 12%; }
+
+/* ---------- Mavzu: fon naqshlari va rang ---------- */
+:root { --tone: #111; }
+[data-theme="dark"] { --tone: #e9e9ee; }
+.view { position: relative; }
+.decor { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.home-decor { position: absolute; left: 0; right: 0; top: 0; height: 440px; z-index: 0; pointer-events: none; overflow: hidden;
+  -webkit-mask-image: linear-gradient(#000 55%, transparent); mask-image: linear-gradient(#000 55%, transparent); }
+.home-decor.p-decor { height: 360px; }
+.home-head, .search-line, .lcard, .promo-row, .p-head { position: relative; z-index: 1; }
+.home-head { position: sticky; }
+.lcard .decor { opacity: .9; }
+[data-tone="gold"] .lcard { background: linear-gradient(135deg, color-mix(in srgb, #d4a64a 16%, var(--surface)), var(--surface) 70%); }
+[data-tone="bronze"] .lcard { background: linear-gradient(135deg, color-mix(in srgb, #c0703c 16%, var(--surface)), var(--surface) 70%); }
+[data-tone="gold"] .lcard .prog i { background: #d4a64a; }
+[data-tone="bronze"] .lcard .prog i { background: #c0703c; }
+
+.tp-frame { margin: 6px 16px 0; height: 330px; border-radius: 26px; background: var(--surface); overflow: hidden; display: flex; justify-content: center; padding-top: 14px; }
+.tp-prev { width: 250px; height: 316px; overflow: hidden; border-radius: 20px 20px 0 0; background: var(--bg); box-shadow: 0 18px 40px -18px rgba(0,0,0,.35); position: relative; pointer-events: none; }
+.tp-inner { width: 390px; transform: scale(.641); transform-origin: 0 0; position: relative; }
+.tp-inner .home-head { position: relative; padding-top: 14px; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.tp-inner .promo-row { overflow: hidden; }
+.tp-cap { text-align: center; font-size: 13px; margin: 10px 16px 4px; }
+.sw-row, .tn-row { display: flex; gap: 12px; overflow-x: auto; padding: 4px 16px 8px; scrollbar-width: none; }
+.sw-row::-webkit-scrollbar, .tn-row::-webkit-scrollbar { display: none; }
+.sw { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 0 0 auto; }
+.sw-box { position: relative; width: 70px; height: 70px; border-radius: 18px; background: var(--surface); overflow: hidden; display: block; border: 2px solid transparent; transition: border-color .25s, transform .25s var(--ease); }
+.sw.on .sw-box { border-color: var(--text); transform: scale(1.04); }
+.sw-box i { position: absolute; right: 6px; bottom: 6px; width: 22px; height: 22px; border-radius: 50%; background: var(--text); color: var(--bg); display: grid; place-items: center; font-size: 13px; font-style: normal; animation: popIn .3s var(--ease); }
+.sw small, .tn small { font-size: 12.5px; color: var(--muted); font-weight: 600; }
+.sw.on small, .tn.on small { color: var(--text); }
+.tn { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.tn-dot { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 22px; color: #fff; border: 3px solid var(--bg); box-shadow: 0 0 0 2px transparent; transition: box-shadow .25s; }
+.tn.on .tn-dot { box-shadow: 0 0 0 2px var(--text); }
+.tn-graphite { background: radial-gradient(circle at 35% 30%, #6b6b72, #1d1d20 70%); }
+.tn-gold { background: radial-gradient(circle at 35% 30%, #f3d98b, #a77a24 72%); }
+.tn-bronze { background: radial-gradient(circle at 35% 30%, #e7a173, #7a3e1b 72%); }
+.reset-look { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 8px auto 2px; color: var(--muted); font-weight: 700; font-size: 14px; }
+@keyframes popIn { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Skaner xabari (mijoz) */
+.scan-note { position: absolute; left: 12px; right: 12px; bottom: 12px; padding: 10px 12px; border-radius: 14px; background: rgba(20,20,22,.88); color: #fff; font-size: 13px; line-height: 1.35; text-align: left; opacity: 0; transform: translateY(10px); transition: .3s var(--ease); pointer-events: none; z-index: 3; }
+.scan-note.show { opacity: 1; transform: none; }
+
+/* Qidiruv */
+.search-row .pp-btn.sb { position: static; width: 40px; height: 40px; flex: 0 0 auto; background: var(--surface); color: var(--text); box-shadow: none; }
+.search-row .search-pill { flex: 1; }
+.search-row .sq-btn { flex: 0 0 auto; }
+.qx { color: var(--muted); font-size: 18px; display: grid; place-items: center; }
+.s-empty { text-align: center; padding: 70px 34px 20px; animation: fadeUp .4s var(--ease); }
+.s-empty .ic { width: 74px; height: 74px; border-radius: 50%; background: var(--surface); display: grid; place-items: center; font-size: 30px; margin: 0 auto 16px; }
+.s-empty b { display: block; font-size: 18px; font-weight: 800; margin-bottom: 6px; }
+.s-empty p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.45; }
+.skel-card i, .skel-card b { display: block; border-radius: 16px; background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%); background-size: 200% 100%; animation: shimmer 1.1s linear infinite; }
+.skel-card i { aspect-ratio: 1; margin-bottom: 8px; }
+.skel-card b { height: 14px; border-radius: 7px; margin-bottom: 6px; width: 70%; }
+.skel-card b.s { width: 50%; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+.fade-in { animation: fadeUp .35s var(--ease); }
+
+/* Mahsulot sahifasi */
+.pp-ball { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border-radius: 10px; background: var(--surface); font-size: 13px; font-weight: 700; margin: 4px 0 12px; }
+.pp-out { color: var(--muted); margin: 0 0 12px; font-size: 14px; }
+.backpill { position: fixed; left: 50%; top: calc(var(--vh, 100vh) - var(--bottom, 0px) - 150px); transform: translate(-50%, 20px); z-index: 30; padding: 10px 16px; border-radius: 999px; background: color-mix(in srgb, var(--surface-2) 88%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); color: var(--text); font-size: 13.5px; font-weight: 700; opacity: 0; pointer-events: none; transition: .35s var(--ease); box-shadow: var(--shadow); }
+.backpill.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
