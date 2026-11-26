@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="light">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <title>Green Market</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+  <link rel="stylesheet" href="/app.css?v=__VERSION__" />
+  <script>window.APP_VERSION = '__VERSION__';</script>
+</head>
+<body>
+  <div id="app">
+    <main id="view" class="view"></main>
+
+    <nav id="tabbar" class="tabbar">
+      <button data-tab="home"><iconify-icon icon="solar:home-smile-angle-bold-duotone"></iconify-icon><span data-i="t_home"></span></button>
+      <button data-tab="cart"><iconify-icon icon="solar:cart-large-2-bold-duotone"></iconify-icon><span data-i="t_cart"></span><b id="cartBadge" class="badge" hidden></b></button>
+      <button data-tab="bonus"><iconify-icon icon="solar:gift-bold-duotone"></iconify-icon><span data-i="t_bonus"></span></button>
+      <button data-tab="profile"><iconify-icon icon="solar:user-circle-bold-duotone"></iconify-icon><span data-i="t_profile"></span></button>
+    </nav>
+  </div>
+
+  <div id="sheetWrap" class="sheet-wrap" hidden>
+    <div class="sheet-backdrop"></div>
+    <div class="sheet"><div class="sheet-grip"></div><div id="sheetBody"></div></div>
+  </div>
+  <div id="toast" class="toast"></div>
+
+  <script src="/app.js?v=__VERSION__"></script>
+</body>
+</html>

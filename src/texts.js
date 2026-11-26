@@ -1,0 +1,51 @@
+// Bot xabarlari (uz / ru)
+const T = {
+  uz: {
+    hello: (n) => `Assalomu alaykum, ${n}! 👋\n<b>Green Market</b> onlayn do'koniga xush kelibsiz.\n\nBuyurtmani yetkazib berishimiz uchun avval <b>lokatsiyangizni</b> yuboring 👇`,
+    askLocation: '📍 Lokatsiyangizni yuboring',
+    btnLocation: '📍 Lokatsiyani yuborish',
+    askPhone: '📞 Endi telefon raqamingizni yuboring 👇',
+    btnPhone: '📞 Raqamni yuborish',
+    notYourPhone: 'Iltimos, pastdagi tugma orqali <b>o\'zingizning</b> raqamingizni yuboring.',
+    thanks: '✅ Rahmat! Ro\'yxatdan o\'tdingiz.',
+    welcome: '🛒 Do\'kon tayyor! Mahsulotlarni tanlash uchun pastdagi tugmani bosing.\n\nIlova har doim eng yangi versiyada ochiladi — qayta /start bosish shart emas.',
+    open: '🛒 Do\'konni ochish',
+    locationSaved: '📍 Yetkazib berish manzili yangilandi.',
+    supportSent: '✉️ Xabaringiz yuborildi. Tez orada javob beramiz.',
+    supportReply: (t) => `💬 <b>Yordam xizmati:</b>\n${t}`,
+    status: {
+      new: '🆕 Qabul qilinmoqda',
+      accepted: '✅ Buyurtmangiz qabul qilindi va tayyorlanmoqda',
+      delivering: '🚚 Buyurtmangiz yo\'lda',
+      done: '🎉 Buyurtmangiz yetkazildi. Xaridingiz uchun rahmat!',
+      cancelled: '❌ Buyurtmangiz bekor qilindi',
+    },
+    orderPlaced: (id) => `🧾 Buyurtma <b>#${id}</b> qabul qilindi! Holati haqida shu yerda xabar beramiz.`,
+    coinsEarned: (c) => `🪙 Sizga <b>+${c} coin</b> qo'shildi!`,
+  },
+  ru: {
+    hello: (n) => `Здравствуйте, ${n}! 👋\nДобро пожаловать в онлайн-магазин <b>Green Market</b>.\n\nДля доставки сначала отправьте <b>вашу локацию</b> 👇`,
+    askLocation: '📍 Отправьте вашу локацию',
+    btnLocation: '📍 Отправить локацию',
+    askPhone: '📞 Теперь отправьте номер телефона 👇',
+    btnPhone: '📞 Отправить номер',
+    notYourPhone: 'Пожалуйста, отправьте <b>свой</b> номер кнопкой ниже.',
+    thanks: '✅ Спасибо! Вы зарегистрированы.',
+    welcome: '🛒 Магазин готов! Нажмите кнопку ниже, чтобы выбрать товары.\n\nПриложение всегда открывается в новой версии — снова нажимать /start не нужно.',
+    open: '🛒 Открыть магазин',
+    locationSaved: '📍 Адрес доставки обновлён.',
+    supportSent: '✉️ Сообщение отправлено. Скоро ответим.',
+    supportReply: (t) => `💬 <b>Поддержка:</b>\n${t}`,
+    status: {
+      new: '🆕 Принимается',
+      accepted: '✅ Заказ принят и готовится',
+      delivering: '🚚 Заказ в пути',
+      done: '🎉 Заказ доставлен. Спасибо за покупку!',
+      cancelled: '❌ Заказ отменён',
+    },
+    orderPlaced: (id) => `🧾 Заказ <b>#${id}</b> принят! О статусе сообщим здесь.`,
+    coinsEarned: (c) => `🪙 Вам начислено <b>+${c} коинов</b>!`,
+  },
+};
+
+module.exports = (lang) => T[lang] || T.uz;
