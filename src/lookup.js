@@ -38,11 +38,27 @@ async function fromUpcItemDb(code) {
   return { name: it.title, brand: it.brand || null, image: (it.images || [])[0] || null, source: 'upcitemdb' };
 }
 
+// O'zbekiston Soliq qo'mitasining yagona elektron katalogi (tasnif.soliq.uz) — mahalliy mahsulotlar ham bor
+async function fromTasnif(code) {
+  for (const lang of ['uz', 'ru']) {
+    const j = await getJson(`https://tasnif.soliq.uz/api/cls-api/mxik/search/by-params?gtin=${code}&page=0&size=5&lang=${lang}`, 8000);
+    const it = j?.data?.content?.[0];
+    if (it?.mxikName) {
+      const name = String(it.mxikName).replace(/\s+/g, ' ').trim();
+      return { name, brand: it.brandName || null, ikpu: it.mxikCode || null, image: null, source: 'tasnif.soliq.uz' };
+    }
+  }
+  return null;
+}
+
 async function lookupBarcode(code) {
   code = String(code || '').replace(/\D/g, '');
   if (code.length < 6 || code.length > 14) return null;
   if (cache.has(code)) return cache.get(code);
-  const res = (await fromOpenFoodFacts(code)) || (await fromUpcItemDb(code)) || null;
+  const [tas, off] = await Promise.all([fromTasnif(code), fromOpenFoodFacts(code)]);
+  let res = tas || off || (await fromUpcItemDb(code)) || null;
+  if (res && !res.image && off?.image) res = { ...res, image: off.image };
+  if (res && !res.image && !off) { const up = await fromUpcItemDb(code); if (up?.image) res = { ...res, image: up.image }; }
   cache.set(code, res);
   if (cache.size > 500) cache.delete(cache.keys().next().value);
   return res;

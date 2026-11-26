@@ -134,8 +134,8 @@ function autoImages(all = false) {
     const list = await db.select('products', 'active=eq.true&select=id,name_uz,barcode,image');
     const todo = list.filter((p) => all || !p.image || p.image.includes('api.iconify.design'));
     let updated = 0; const missing = [];
-    for (let i = 0; i < todo.length; i += 4) {
-      await Promise.all(todo.slice(i, i + 4).map(async (p) => {
+    for (let i = 0; i < todo.length; i += 1) {
+      await Promise.all(todo.slice(i, i + 1).map(async (p) => {
         const r = await findImage(p).catch(() => null);
         if (!r?.image) { missing.push(p.name_uz); return; }
         const patch = { image: r.image };

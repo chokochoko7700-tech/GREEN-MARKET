@@ -56,10 +56,18 @@ function qtyKeys(name) {
   if (u === 'kg') keys.push(`${Math.round(n * 1000)} g`);
   return keys.map((k) => k.toLowerCase());
 }
+// Open Food Facts qidiruvi daqiqasiga ~10 so'rov — navbat bilan
+let lastSearch = 0;
+async function throttle() {
+  const wait = lastSearch + 6500 - Date.now();
+  lastSearch = Math.max(Date.now(), lastSearch + 6500);
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+}
 async function fromOffSearch(name) {
   const low = name.toLowerCase();
   const hit = BRANDS.find(([k]) => low.startsWith(k) || low.includes(k));
   if (!hit) return null;
+  await throttle();
   const j = await getJson(`https://world.openfoodfacts.org/api/v2/search?brands_tags=${hit[1]}&fields=code,product_name,brands,quantity,image_front_url,unique_scans_n&sort_by=unique_scans_n&page_size=60`);
   const list = (j?.products || []).filter((p) => p.image_front_url && p.product_name);
   if (!list.length) return null;
