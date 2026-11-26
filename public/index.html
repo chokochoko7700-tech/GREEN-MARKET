@@ -4,23 +4,41 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta http-equiv="Cache-Control" content="no-store" />
+  <meta name="theme-color" content="#ffffff" />
   <title>Green Market</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://telegram.org/js/telegram-web-app.js?59"></script>
   <script src="https://cdn.jsdelivr.net/npm/iconify-icon@2.1.0/dist/iconify-icon.min.js"></script>
+  <link rel="preconnect" href="https://api.iconify.design" />
   <link rel="stylesheet" href="/app.css?v=__VERSION__" />
   <script>window.APP_VERSION = '__VERSION__';</script>
 </head>
 <body>
-  <div id="app">
-    <main id="view" class="view"></main>
-
-    <nav id="tabbar" class="tabbar">
-      <button data-tab="home"><iconify-icon icon="solar:home-smile-angle-bold-duotone"></iconify-icon><span data-i="t_home"></span></button>
-      <button data-tab="cart"><iconify-icon icon="solar:cart-large-2-bold-duotone"></iconify-icon><span data-i="t_cart"></span><b id="cartBadge" class="badge" hidden></b></button>
-      <button data-tab="bonus"><iconify-icon icon="solar:gift-bold-duotone"></iconify-icon><span data-i="t_bonus"></span></button>
-      <button data-tab="profile"><iconify-icon icon="solar:user-circle-bold-duotone"></iconify-icon><span data-i="t_profile"></span></button>
-    </nav>
+  <div id="splash" class="splash">
+    <div>
+      <div class="logo"><iconify-icon icon="solar:bag-smile-bold"></iconify-icon></div>
+      <div class="name">Green Market</div>
+    </div>
   </div>
+
+  <main id="view" class="view"></main>
+
+  <nav id="tabbar" class="tabbar" hidden>
+    <button data-tab="home">
+      <iconify-icon class="off-ic" icon="solar:home-2-linear"></iconify-icon><iconify-icon class="on-ic" icon="solar:home-2-bold"></iconify-icon>
+      <span data-i="t_home"></span></button>
+    <button data-tab="catalog">
+      <iconify-icon class="off-ic" icon="solar:widget-2-linear"></iconify-icon><iconify-icon class="on-ic" icon="solar:widget-2-bold"></iconify-icon>
+      <span data-i="t_catalog"></span></button>
+    <button data-tab="cart">
+      <iconify-icon class="off-ic" icon="solar:bag-4-linear"></iconify-icon><iconify-icon class="on-ic" icon="solar:bag-4-bold"></iconify-icon>
+      <span data-i="t_cart"></span><b id="cartBadge" class="badge" hidden></b></button>
+    <button data-tab="fav">
+      <iconify-icon class="off-ic" icon="solar:heart-linear"></iconify-icon><iconify-icon class="on-ic" icon="solar:heart-bold"></iconify-icon>
+      <span data-i="t_fav"></span></button>
+    <button data-tab="profile">
+      <iconify-icon class="off-ic" icon="solar:user-linear"></iconify-icon><iconify-icon class="on-ic" icon="solar:user-bold"></iconify-icon>
+      <span data-i="t_profile"></span></button>
+  </nav>
 
   <div id="sheetWrap" class="sheet-wrap" hidden>
     <div class="sheet-backdrop"></div>

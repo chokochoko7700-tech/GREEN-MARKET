@@ -8,7 +8,7 @@ Do'kon mahsulotlarini onlayn buyurtma qilish: Telegram bot + Mini App + admin pa
 - **Coin tizimi:** har N so'm xarid = 1 coin (yetkazilgandan keyin tushadi). Coinga sovg'a mahsulotlar.
 - **Banner:** avtomatik aylanadi (tezligi admin sozlamalarida), bosilsa mahsulot yoki kategoriyaga o'tadi.
 - **Profil:** rasm, ism, telefon, xaritadan manzil, til (uz/ru), mavzu (kunduzgi/tungi/auto), yordam + FAQ.
-- **Admin panel** (ilova ichida, faqat ADMIN_IDS uchun): buyurtmalar, mahsulotlar, kategoriyalar, bannerlar, savollar, sozlamalar.
+- **Admin panel** alohida admin botda (`/admin` sahifa, faqat ADMIN_IDS uchun): buyurtmalar, mahsulotlar, kategoriyalar, bannerlar, savollar, sozlamalar.
 - **Avtomatik yangilanish:** yangi deploy chiqsa, mijozlarda ilova o'zi yangilanadi — /start shart emas.
 
 ## Texnologiya
@@ -18,6 +18,7 @@ Node.js (tashqi kutubxonasiz), Supabase (Postgres + Storage), Render, Solar ikon
 | Kalit | Qiymat |
 |---|---|
 | `BOT_TOKEN` | @BotFather tokeni |
+| `ADMIN_BOT_TOKEN` | admin bot tokeni (buyurtmalar va admin panel shu botda) |
 | `ADMIN_IDS` | admin Telegram ID (bir nechta bo'lsa vergul bilan) |
 | `SUPABASE_URL` | `https://<ref>.supabase.co` |
 | `SUPABASE_SERVICE_KEY` | Supabase **secret** kaliti (`sb_secret_...`) |

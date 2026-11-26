@@ -6,8 +6,9 @@ const crypto = require('crypto');
 
 const cfg = require('./src/config');
 const db = require('./src/db');
-const tg = require('./src/tg');
+const tgs = require('./src/tg');
 const bot = require('./src/bot');
+const adminBot = require('./src/adminbot');
 const orders = require('./src/orders');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
@@ -50,7 +51,7 @@ function readBody(req, limit = 6 * 1024 * 1024) {
 }
 
 function serveStatic(req, res, pathname) {
-  if (pathname === '/' || pathname === '/index.html') {
+  if (pathname === '/' || pathname === '/index.html' || pathname === '/admin') {
     res.writeHead(200, { 'Content-Type': MIME['.html'], 'Cache-Control': 'no-store, max-age=0' });
     return res.end(getIndex());
   }
@@ -69,7 +70,14 @@ function serveStatic(req, res, pathname) {
 
 // ---------- Auth ----------
 async function auth(req) {
-  const tgUser = tg.verifyInitData(req.headers['x-init-data']);
+  const initData = req.headers['x-init-data'];
+  // Admin bot orqali ochilgan panel
+  const adm = tgs.hasAdminBot ? tgs.admin.verifyInitData(initData) : null;
+  if (adm) {
+    if (!cfg.isAdmin(adm.id)) { const e = new Error('Faqat admin uchun'); e.code = 403; throw e; }
+    return { id: adm.id, name: adm.first_name, is_admin: true, via_admin_bot: true };
+  }
+  const tgUser = tgs.shop.verifyInitData(initData);
   if (!tgUser) { const e = new Error('Avtorizatsiya xato. Ilovani bot orqali oching.'); e.code = 401; throw e; }
   let user = await db.one('users', `id=eq.${tgUser.id}`);
   if (!user) {
@@ -93,8 +101,8 @@ function requireAdmin(user) {
 const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== undefined).map((k) => [k, obj[k]]));
 
 const ADMIN_TABLES = {
-  products: ['category_id', 'name_uz', 'name_ru', 'desc_uz', 'desc_ru', 'image', 'unit', 'price', 'old_price', 'piece_kg', 'min_kg', 'coin_price', 'in_stock', 'sort', 'active'],
-  categories: ['name_uz', 'name_ru', 'icon', 'sort', 'active'],
+  products: ['category_id', 'name_uz', 'name_ru', 'desc_uz', 'desc_ru', 'image', 'unit', 'price', 'old_price', 'piece_kg', 'min_kg', 'coin_price', 'popular', 'in_stock', 'sort', 'active'],
+  categories: ['name_uz', 'name_ru', 'icon', 'image', 'sort', 'active'],
   banners: ['image', 'title', 'subtitle', 'link_type', 'link_id', 'sort', 'active'],
   faq: ['q_uz', 'a_uz', 'q_ru', 'a_ru', 'sort'],
 };
@@ -133,6 +141,9 @@ async function api(req, res, pathname, query) {
   const user = await auth(req);
 
   if (pathname === '/api/me' && method === 'GET') return json(res, 200, user);
+  if (user.via_admin_bot && !pathname.startsWith('/api/admin/')) {
+    throw Object.assign(new Error('Admin panel faqat admin bo\'limi uchun'), { code: 403 });
+  }
 
   if (pathname === '/api/me' && method === 'PATCH') {
     const b = await readBody(req);
@@ -221,7 +232,7 @@ async function api(req, res, pathname, query) {
 
     if (entity === 'settings' && method === 'PATCH') {
       const b = await readBody(req);
-      for (const key of ['shop', 'delivery', 'coins', 'banner']) {
+      for (const key of ['shop', 'delivery', 'coins', 'banner', 'theme', 'info']) {
         if (b[key] && typeof b[key] === 'object') await db.upsert('settings', { key, value: b[key] }, 'key');
       }
       return json(res, 200, await loadSettings());
@@ -261,6 +272,13 @@ const server = http.createServer(async (req, res) => {
       return res.end('ok');
     }
 
+    if (pathname === `/webhook-admin/${cfg.ADMIN_WEBHOOK_SECRET}` && req.method === 'POST') {
+      if (req.headers['x-telegram-bot-api-secret-token'] !== cfg.ADMIN_WEBHOOK_SECRET) { res.writeHead(403); return res.end(); }
+      const update = await readBody(req);
+      res.writeHead(200); res.end('ok');
+      return adminBot.handleUpdate(update);
+    }
+
     if (pathname === `/webhook/${cfg.WEBHOOK_SECRET}` && req.method === 'POST') {
       if (req.headers['x-telegram-bot-api-secret-token'] !== cfg.WEBHOOK_SECRET) { res.writeHead(403); return res.end(); }
       const update = await readBody(req);
@@ -287,6 +305,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(cfg.PORT, () => {
   console.log(`Green Market ${cfg.VERSION} — port ${cfg.PORT}`);
   bot.setup().catch((e) => console.error('Bot setup xato:', e));
+  adminBot.setup().catch((e) => console.error('Admin bot setup xato:', e));
   if (db.enabled) {
     db.select('products', 'select=id&limit=1')
       .then(() => console.log('Baza: ulandi ✅'))

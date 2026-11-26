@@ -164,3 +164,16 @@ select * from (values
   ('Kilolik mahsulot narxi qanday hisoblanadi?', 'Kilo, summa yoki dona bo''yicha tanlaysiz. Dona tanlansa, narx taxminiy — aniq summa tortilgandan keyin chiqadi.', 'Как считается весовой товар?', 'Выбираете по весу, сумме или штукам. При выборе штук цена примерная — точная после взвешивания.', 2),
   ('Coin nima?', 'Har bir xariddan coin yig''ilib boradi. Coinlarga Bonus bo''limidagi mahsulotlarni bepul olasiz.', 'Что такое коины?', 'С каждой покупки начисляются коины. На них можно получить товары из раздела Бонусы.', 3)
 ) v where not exists (select 1 from faq);
+
+-- v2: ommabop mahsulotlar, rang va ma'lumot sahifalari
+alter table products add column if not exists popular boolean not null default false;
+insert into settings(key, value) values
+  ('theme', '{"accent":"#16a34a"}'),
+  ('info', '{"about":"","delivery":"","returns":"","instagram":"","telegram":""}')
+on conflict (key) do nothing;
+-- Yangi Supabase loyihalarida service_role'ga ruxsat
+grant usage on schema public to service_role;
+grant select, insert, update, delete on all tables in schema public to service_role;
+grant usage, select on all sequences in schema public to service_role;
+grant execute on function public.add_coins(bigint, integer) to service_role;
+alter table categories add column if not exists image text;

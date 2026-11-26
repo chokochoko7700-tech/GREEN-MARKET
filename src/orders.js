@@ -1,5 +1,5 @@
 const db = require('./db');
-const tg = require('./tg');
+const { shop: tg, admin: adminTg } = require('./tg');
 const t = require('./texts');
 const cfg = require('./config');
 const { priceLine } = require('./pricing');
@@ -105,12 +105,12 @@ async function create(user, body) {
   tg.call('sendMessage', { chat_id: user.id, text: t(user.lang).orderPlaced(order.id), parse_mode: 'HTML' });
   const msgs = [];
   for (const adminId of cfg.ADMIN_IDS) {
-    const m = await tg.call('sendMessage', {
+    const m = await adminTg.call('sendMessage', {
       chat_id: adminId, text: adminText(order), parse_mode: 'HTML',
       reply_markup: adminButtons(order), link_preview_options: { is_disabled: true },
     });
     if (m) msgs.push({ chat_id: adminId, message_id: m.message_id });
-    if (order.lat && order.lng) tg.call('sendLocation', { chat_id: adminId, latitude: order.lat, longitude: order.lng, reply_to_message_id: m?.message_id });
+    if (order.lat && order.lng) adminTg.call('sendLocation', { chat_id: adminId, latitude: order.lat, longitude: order.lng, reply_to_message_id: m?.message_id });
   }
   if (msgs.length) db.update('orders', `id=eq.${order.id}`, { admin_msg: msgs }).catch(console.error);
   return order;
@@ -142,7 +142,7 @@ async function setStatus(id, status) {
   }
 
   for (const m of upd.admin_msg || []) {
-    tg.call('editMessageText', {
+    adminTg.call('editMessageText', {
       chat_id: m.chat_id, message_id: m.message_id, text: adminText(upd),
       parse_mode: 'HTML', reply_markup: adminButtons(upd), link_preview_options: { is_disabled: true },
     });
