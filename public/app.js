@@ -359,7 +359,7 @@ document.addEventListener('click', (ev) => {
   const t = ev.target.closest('[data-add],[data-inc],[data-dec],[data-open],[data-p],[data-go],[data-back],[data-act]');
   if (!t) return;
   if (t.closest('#sheetWrap') && !t.matches('[data-go],[data-act]')) return;
-  if (t.dataset.back !== undefined) { history.back(); return; }
+  if (t.dataset.back !== undefined) { goBack(); return; }
   if (t.dataset.go) { hap('light'); closeSheet(); go(t.dataset.go); return; }
   if (t.dataset.act) { hap('light'); ACTIONS[t.dataset.act]?.(t); return; }
   const id = Number(t.dataset.add || t.dataset.inc || t.dataset.dec || t.dataset.open || t.dataset.p);
@@ -425,7 +425,7 @@ function render(silent = false) {
   $$('#fnav [data-tab]').forEach((x) => x.classList.toggle('on', x.dataset.tab === page));
   $$('[data-i]').forEach((el) => { el.textContent = tr(el.dataset.i); });
   const back = !isTab && !(ADMIN_MODE && page === 'admin') && page !== 'intro';
-  try { back ? tg.BackButton.show() : tg.BackButton.hide(); } catch {}
+  setBack(back);
   document.body.classList.toggle('tg-back', !!(back && tg?.initData && tg.isVersionAtLeast?.('6.1')));
   const v = $('#view');
   v.classList.toggle('bare', !isTab);
@@ -433,7 +433,29 @@ function render(silent = false) {
   const R = { home, catalog, cat: category, p: productPage, fav: favPage, list: shopList, deals, recipes, recipe, search, stores, profile, cart, checkout, card, purchases, edit, notif, settings, addr, info, success, intro, admin };
   (R[page] || home)(v, a, b);
 }
-try { tg.BackButton.onClick(() => { const so = $('.story'); if (so) return so.close(); if (!$('#sheetWrap').hidden) return closeSheet(); history.length > 1 ? history.back() : go('home'); }); } catch {}
+// Telegram "Orqaga" tugmasi: faqat ichki sahifalarda ko'rinadi
+function setBack(on) {
+  try { on ? tg.BackButton.show() : tg.BackButton.hide(); } catch {}
+  setTimeout(() => { try { const need = !!$('.story') || TABS.includes(route()[0]) === false && !(ADMIN_MODE && route()[0] === 'admin') && route()[0] !== 'intro'; need ? tg.BackButton.show() : tg.BackButton.hide(); } catch {} }, 300);
+}
+function goBack() {
+  const so = $('.story'); if (so) return so.close();
+  if (!$('#sheetWrap').hidden) return closeSheet();
+  const page = route()[0];
+  if (TABS.includes(page) || (ADMIN_MODE && page === 'admin')) { setBack(false); return; }
+  if (stack.length > 1) history.back();
+  else { stack.length = 0; location.replace('#home'); }
+}
+try { tg.BackButton.onClick(goBack); } catch {}
+// Ko'rinadigan ekran balandligi (Telegram iOS'da 100vh ishonchsiz)
+function setVh() {
+  const a = Number(tg?.viewportStableHeight) || 0, b = window.innerHeight || 0;
+  const h = a && b ? Math.min(a, b) : (a || b);
+  if (h) document.documentElement.style.setProperty('--vh', h + 'px');
+}
+setVh();
+window.addEventListener('resize', setVh);
+try { tg.onEvent('viewportChanged', setVh); tg.onEvent('fullscreenChanged', setVh); tg.onEvent('safeAreaChanged', setVh); } catch {}
 
 const needCatalog = (v) => {
   if (S.catalog) return false;
@@ -549,7 +571,7 @@ function openStories(groups, gi) {
   const close = () => {
     cancelAnimationFrame(raf); el.classList.add('out');
     setTimeout(() => el.remove(), 300);
-    try { if (TABS.includes(route()[0])) tg.BackButton.hide(); } catch {}
+    setBack(!TABS.includes(route()[0]));
   };
   el.close = close;
   const draw = () => {
