@@ -189,3 +189,7 @@ create table if not exists recipes (
 alter table recipes enable row level security;
 grant select, insert, update, delete on recipes to service_role;
 alter table banners alter column image drop not null;
+
+-- v5: shtrix-kod
+alter table products add column if not exists barcode text;
+create index if not exists products_barcode_idx on products(barcode);

@@ -10,6 +10,7 @@ const tgs = require('./src/tg');
 const bot = require('./src/bot');
 const adminBot = require('./src/adminbot');
 const orders = require('./src/orders');
+const { lookupBarcode } = require('./src/lookup');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const MIME = {
@@ -101,7 +102,7 @@ function requireAdmin(user) {
 const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== undefined).map((k) => [k, obj[k]]));
 
 const ADMIN_TABLES = {
-  products: ['category_id', 'name_uz', 'name_ru', 'desc_uz', 'desc_ru', 'image', 'unit', 'price', 'old_price', 'piece_kg', 'min_kg', 'coin_price', 'popular', 'sub', 'in_stock', 'sort', 'active'],
+  products: ['category_id', 'name_uz', 'name_ru', 'desc_uz', 'desc_ru', 'image', 'unit', 'price', 'old_price', 'piece_kg', 'min_kg', 'coin_price', 'popular', 'sub', 'barcode', 'in_stock', 'sort', 'active'],
   categories: ['name_uz', 'name_ru', 'grp', 'icon', 'image', 'sort', 'active'],
   banners: ['image', 'title', 'subtitle', 'link_type', 'link_id', 'style', 'color', 'story_title', 'stories', 'sort', 'active'],
   recipes: ['title_uz', 'title_ru', 'image', 'body_uz', 'body_ru', 'product_ids', 'sort', 'active'],
@@ -254,6 +255,51 @@ async function api(req, res, pathname, query) {
         today_sum: today.reduce((s, o) => s + o.total, 0),
         users: users.length,
       });
+    }
+
+    // Skaner: mahsulot shtrix-kodi yoki mijoz kartasi (GM-<id>)
+    if (entity === 'lookup' && method === 'GET') {
+      const code = String(query.get('code') || '').trim();
+      const m = /^GM-(\d{3,15})$/i.exec(code);
+      if (m) {
+        const u = await db.one('users', `id=eq.${m[1]}`);
+        if (!u) return json(res, 404, { error: 'Mijoz topilmadi' });
+        const cc = await orders.getSetting('coins', {});
+        return json(res, 200, { type: 'customer', customer: { id: u.id, name: u.name || u.tg_name, phone: u.phone, coins: u.coins, spent: u.spent, level: orders.levelOf(cc, u.spent) } });
+      }
+      const digits = code.replace(/\D/g, '');
+      if (!digits) return json(res, 400, { error: 'Kod noto\'g\'ri' });
+      const prod = await db.one('products', `barcode=eq.${db.enc(digits)}`);
+      if (prod) return json(res, 200, { type: 'product', product: prod });
+      return json(res, 200, { type: 'new', barcode: digits, suggestion: await lookupBarcode(digits) });
+    }
+
+    // Kassada: xarid summasidan ball qo'shish yoki ball bilan to'lash
+    if (entity === 'customer' && id && method === 'POST') {
+      const b = await readBody(req);
+      const u = await db.one('users', `id=eq.${Number(id)}`);
+      if (!u) throw Object.assign(new Error('Mijoz topilmadi'), { code: 404 });
+      const amount = Math.max(0, Math.floor(Number(b.amount) || 0));
+      const spend = Math.max(0, Math.floor(Number(b.spend) || 0));
+      const cc = await orders.getSetting('coins', {});
+      let earned = 0;
+      if (spend) {
+        const left = await db.rpc('add_coins', { uid: u.id, delta: -spend });
+        if (left === null) throw Object.assign(new Error('Ball yetarli emas'), { code: 400 });
+        orders.logCoins(u.id, -spend, 'store_spend');
+      }
+      if (amount) {
+        const paid = Math.max(0, amount - spend);
+        earned = cc.enabled === false ? 0 : Math.floor((paid * orders.levelOf(cc, u.spent).pct) / 100);
+        await db.update('users', `id=eq.${u.id}`, { spent: Number(u.spent || 0) + paid });
+        if (earned) { await db.rpc('add_coins', { uid: u.id, delta: earned }); orders.logCoins(u.id, earned, 'store'); }
+      }
+      const nu = await db.one('users', `id=eq.${u.id}`);
+      const parts = [];
+      if (spend) parts.push(`🧾 Do'kondagi xariddan ${spend.toLocaleString('ru-RU')} ball yechildi`);
+      if (earned) parts.push(`🪙 Do'kondagi xarid uchun +${earned.toLocaleString('ru-RU')} ball`);
+      if (parts.length) tgs.shop.call('sendMessage', { chat_id: u.id, text: `${parts.join('\n')}\nBalans: ${Number(nu.coins).toLocaleString('ru-RU')} ball` });
+      return json(res, 200, { earned, spent: spend, customer: { id: nu.id, name: nu.name || nu.tg_name, phone: nu.phone, coins: nu.coins, spent: nu.spent, level: orders.levelOf(cc, nu.spent) } });
     }
 
     if (entity === 'upload' && method === 'POST') {

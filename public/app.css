@@ -527,3 +527,50 @@ img[src*="api.iconify.design"] { object-fit: contain !important; padding: 13%; }
 .pplay i { width: 14px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.55); }
 .pplay i:first-of-type { background: #fff; }
 .promo .pimg { bottom: 18px; }
+
+/* ---------- Admin v5: sodda panel ---------- */
+.scan-hero { display: flex; align-items: center; gap: 14px; width: calc(100% - 32px); margin: 0 16px 12px; padding: 18px; border-radius: 22px; background: var(--ink); color: var(--ink-text); text-align: left; }
+.scan-hero .ic { width: 52px; height: 52px; border-radius: 16px; background: rgba(255,255,255,.14); display: grid; place-items: center; font-size: 26px; flex: none; }
+.scan-hero b { display: block; font-size: 19px; font-weight: 800; }
+.scan-hero small { opacity: .75; font-size: 13px; }
+.atiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0 16px; }
+.atile { text-align: left; background: var(--surface); border-radius: 20px; padding: 16px; display: flex; flex-direction: column; gap: 4px; font-size: 24px; }
+.atile b { font-size: 16px; font-weight: 800; margin-top: 6px; }
+.atile small { font-size: 13px; color: var(--muted); }
+.nb { background: var(--danger); color: #fff; padding: 2px 8px; border-radius: 10px; font-weight: 700; }
+.fab { position: fixed; right: 16px; top: calc(var(--vh) - 70px - var(--bottom)); z-index: 30; height: 52px; padding: 0 20px; border-radius: 26px; background: var(--ink); color: var(--ink-text); display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 15px; box-shadow: var(--shadow); }
+.view.bare #adm { padding-bottom: 80px; }
+.scanbox { position: relative; border-radius: 20px; overflow: hidden; background: #111; aspect-ratio: 1.4; display: grid; place-items: center; }
+#qrReader { position: absolute; inset: 0; }
+#qrReader video { width: 100% !important; height: 100% !important; object-fit: cover; }
+#qrReader img, #qrReader__dashboard, #qrReader__header_message { display: none !important; }
+.scanline { position: absolute; left: 12%; right: 12%; top: 50%; height: 2px; background: #ef3b3b; box-shadow: 0 0 12px #ef3b3b; animation: scanY 1.6s ease-in-out infinite; z-index: 2; pointer-events: none; }
+@keyframes scanY { 0%, 100% { transform: translateY(-50px); } 50% { transform: translateY(50px); } }
+.scanmsg { position: relative; z-index: 3; color: #fff; text-align: center; font-size: 14px; padding: 20px; line-height: 1.5; }
+.scanmsg iconify-icon { font-size: 30px; }
+.qmark { width: 56px; height: 56px; border-radius: 50%; background: #2563eb; color: #fff; display: grid; place-items: center; font-size: 30px; margin: 8px auto 4px; }
+.dash { gap: 8px; margin-bottom: 14px; }
+.dash > div { border: 1.5px dashed var(--surface-2); border-radius: 14px; padding: 10px 12px; min-width: 0; }
+.dash small { display: block; color: var(--muted); font-size: 11.5px; }
+.dash b { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sgimg { width: 110px; height: 110px; margin: 0 auto 12px; border-radius: 18px; background: #fff; overflow: hidden; box-shadow: var(--shadow); }
+.sgimg img { width: 100%; height: 100%; object-fit: contain; }
+.cust { display: flex; gap: 12px; align-items: center; margin-bottom: 12px; }
+.cust .ava { width: 52px; height: 52px; font-size: 22px; }
+.cust b { display: block; font-size: 18px; font-weight: 800; }
+.cust small { color: var(--muted); }
+.fimg-row { display: flex; align-items: center; gap: 12px; }
+.img-sq { width: 76px; height: 76px; border-radius: 16px; background: var(--surface); border: 1.5px dashed var(--surface-2); display: grid; place-items: center; color: var(--muted); font-size: 24px; overflow: hidden; flex: none; }
+.img-sq img { width: 100%; height: 100%; object-fit: cover; }
+.inrow { display: flex; gap: 8px; }
+.inrow input { flex: 1; min-width: 0; }
+.inrow .sq-btn { height: 52px; width: 52px; }
+.more-f { width: 100%; margin: 2px 0 12px; }
+.sheet .two { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.acc { margin: 0 0 8px; }
+.acc summary { list-style: none; display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; font-weight: 800; font-size: 17px; cursor: pointer; }
+.acc summary::-webkit-details-marker { display: none; }
+.acc summary iconify-icon { transition: transform .25s var(--ease); color: var(--muted); }
+.acc[open] summary iconify-icon { transform: rotate(180deg); }
+.acc .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+.acc .two .field:first-child { margin-right: 4px; } .acc .two .field:last-child { margin-left: 4px; }

@@ -1,0 +1,51 @@
+// Shtrix-kod bo'yicha mahsulot nomini internetdagi ochiq bazalardan topish
+const cache = new Map();
+
+async function getJson(url, ms = 4500) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), ms);
+  try {
+    const r = await fetch(url, { signal: ctl.signal, headers: { 'User-Agent': 'GreenMarket/1.0 (telegram mini app)' } });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch { return null; } finally { clearTimeout(t); }
+}
+
+async function fromOpenFoodFacts(code) {
+  const base = ['world.openfoodfacts.org', 'world.openbeautyfacts.org', 'world.openproductsfacts.org'];
+  for (const host of base) {
+    const j = await getJson(`https://${host}/api/v2/product/${code}.json?fields=product_name,product_name_ru,product_name_uz,generic_name,brands,quantity,image_front_url,image_url`);
+    const p = j && j.status === 1 ? j.product : null;
+    if (p) {
+      const name = p.product_name_uz || p.product_name_ru || p.product_name || p.generic_name;
+      if (name) {
+        return {
+          name: [name, p.quantity].filter(Boolean).join(' ').trim(),
+          brand: (p.brands || '').split(',')[0].trim() || null,
+          image: p.image_front_url || p.image_url || null,
+          source: host,
+        };
+      }
+    }
+  }
+  return null;
+}
+
+async function fromUpcItemDb(code) {
+  const j = await getJson(`https://api.upcitemdb.com/prod/trial/lookup?upc=${code}`);
+  const it = j && Array.isArray(j.items) ? j.items[0] : null;
+  if (!it || !it.title) return null;
+  return { name: it.title, brand: it.brand || null, image: (it.images || [])[0] || null, source: 'upcitemdb' };
+}
+
+async function lookupBarcode(code) {
+  code = String(code || '').replace(/\D/g, '');
+  if (code.length < 6 || code.length > 14) return null;
+  if (cache.has(code)) return cache.get(code);
+  const res = (await fromOpenFoodFacts(code)) || (await fromUpcItemDb(code)) || null;
+  cache.set(code, res);
+  if (cache.size > 500) cache.delete(cache.keys().next().value);
+  return res;
+}
+
+module.exports = { lookupBarcode };

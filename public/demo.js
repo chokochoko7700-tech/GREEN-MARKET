@@ -59,6 +59,12 @@
     if (path === '/api/coins') return D.coins;
     if (path === '/api/admin/all') return D.catalog;
     if (path.startsWith('/api/admin/orders')) return D.orders.map((o) => ({ ...o, status: 'new', name: 'Aslbek', phone: '+998904447604', address: 'Ipak yo\'li 12', lat: 39.05, lng: 66.83 }));
+    if (path.startsWith('/api/admin/lookup')) {
+      const code = decodeURIComponent(path.split('code=')[1] || '');
+      if (/^GM-/i.test(code)) return { type: 'customer', customer: { id: 777, name: 'Aslbek', phone: '+998904447604', coins: 1250, spent: 1200000, level: { name: 'Bronza', pct: 1 } } };
+      return { type: 'new', barcode: code, suggestion: { name: 'Nescafe Classic 2 g', brand: 'Nescafe', image: null } };
+    }
+    if (path.startsWith('/api/admin/customer/')) return { earned: 850, spent: 0, customer: { id: 777, name: 'Aslbek', coins: 2100, spent: 1285000, level: { name: 'Bronza', pct: 1 } } };
     if (path === '/api/admin/stats') return { today_orders: 3, today_sum: 154000, users: 42 };
     return { ok: true };
   };

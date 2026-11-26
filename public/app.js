@@ -43,10 +43,10 @@ const L = {
     askTitle: 'Kerakli mahsulot topilmadimi?', askBtn: 'Olib kelishni so\'rash', askPh: 'Qaysi mahsulot kerak? Nomi, hajmi…', asked: 'So\'rov yuborildi. Rahmat!',
     lvl: (n, p) => `${n} · ${p}%`, collect: 'Ball yig\'ing', balls: 'ball', showCode: 'Buyurtma qiling va ball to\'plang',
     nextLvl: (s) => `Keyingi darajagacha ${fmt(s)} so'm`, maxLvl: 'Eng yuqori daraja',
-    card: 'Sodiqlik kartasi', cardHint: 'Do\'konda kassirga shu kodni ko\'rsating', levels: 'Darajalar', fromSum: (s) => s ? `${fmt(s)} so'mdan` : 'Boshlang\'ich',
+    card: 'Sodiqlik kartasi', cardHint: 'Kassada ko\'rsating — xariddan ball qo\'shiladi yoki ball bilan to\'laysiz', levels: 'Darajalar', fromSum: (s) => s ? `${fmt(s)} so'mdan` : 'Boshlang\'ich',
     cashback: (p) => `Har xariddan ${p}% ball`, history: 'Ballar tarixi', gifts: 'Ballga sovg\'alar', take: 'Olish', needMore: (n) => `yana ${fmt(n)}`,
     giftAdded: 'Sovg\'a savatga qo\'shildi', gift: 'Sovg\'a', bdayNote: (b) => `Tug'ilgan kuningizda ${fmt(b)} ball sovg'a qilamiz 🎂`,
-    r_order: 'Xarid uchun', r_gift: 'Sovg\'aga sarflandi', r_refund: 'Qaytarildi', r_birthday: 'Tug\'ilgan kun sovg\'asi 🎂', r_manual: 'Do\'kon tomonidan',
+    r_order: 'Xarid uchun', r_gift: 'Sovg\'aga sarflandi', r_refund: 'Qaytarildi', r_birthday: 'Tug\'ilgan kun sovg\'asi 🎂', r_store: 'Do\'kondagi xarid', r_store_spend: 'Do\'konda ball bilan to\'lov', r_manual: 'Do\'kon tomonidan',
     byKg: 'Kilo', bySum: 'Summa', byPc: 'Dona', enterSum: 'Qancha so\'mlik?', approx: 'taxminan', perKg: 'kg narxi',
     estNote: 'Dona tanlanganda narx taxminiy. Aniq summa tortilgandan keyin hisoblanadi.',
     addCart: 'Savatga qo\'shish', save: 'Saqlash', remove: 'O\'chirish', added: 'Savatga qo\'shildi', minIs: 'Kamida',
@@ -90,10 +90,10 @@ const L = {
     askTitle: 'Не нашли нужный товар?', askBtn: 'Попросить привезти', askPh: 'Какой товар нужен? Название, объём…', asked: 'Запрос отправлен. Спасибо!',
     lvl: (n, p) => `${n} · ${p}%`, collect: 'Копите баллы', balls: 'баллов', showCode: 'Заказывайте и копите баллы',
     nextLvl: (s) => `До следующего уровня ${fmt(s)} сум`, maxLvl: 'Максимальный уровень',
-    card: 'Карта лояльности', cardHint: 'Покажите код кассиру в магазине', levels: 'Уровни', fromSum: (s) => s ? `от ${fmt(s)} сум` : 'Начальный',
+    card: 'Карта лояльности', cardHint: 'Покажите на кассе — начислим баллы или оплатите баллами', levels: 'Уровни', fromSum: (s) => s ? `от ${fmt(s)} сум` : 'Начальный',
     cashback: (p) => `${p}% баллами с покупки`, history: 'История баллов', gifts: 'Подарки за баллы', take: 'Взять', needMore: (n) => `ещё ${fmt(n)}`,
     giftAdded: 'Подарок добавлен в корзину', gift: 'Подарок', bdayNote: (b) => `В день рождения дарим ${fmt(b)} баллов 🎂`,
-    r_order: 'За покупку', r_gift: 'Потрачено на подарок', r_refund: 'Возврат', r_birthday: 'Подарок на день рождения 🎂', r_manual: 'От магазина',
+    r_order: 'За покупку', r_gift: 'Потрачено на подарок', r_refund: 'Возврат', r_birthday: 'Подарок на день рождения 🎂', r_store: 'Покупка в магазине', r_store_spend: 'Оплата баллами в магазине', r_manual: 'От магазина',
     byKg: 'Вес', bySum: 'Сумма', byPc: 'Штуки', enterSum: 'На какую сумму?', approx: 'примерно', perKg: 'за кг',
     estNote: 'При выборе штук цена примерная. Точная сумма — после взвешивания.',
     addCart: 'В корзину', save: 'Сохранить', remove: 'Удалить', added: 'Добавлено в корзину', minIs: 'Минимум',
@@ -394,7 +394,7 @@ const ACTIONS = {
 /* ---------------- ROUTER ---------------- */
 const TABS = ['home', 'catalog', 'stores', 'profile'];
 const stack = [];
-const route = () => (location.hash.slice(1) || (ADMIN_MODE ? 'admin/orders' : 'home')).split('/');
+const route = () => (location.hash.slice(1) || (ADMIN_MODE ? 'admin/home' : 'home')).split('/');
 function go(h) { if (location.hash !== '#' + h) location.hash = h; else render(true); }
 window.addEventListener('hashchange', () => { closeSheet(); render(); });
 $$('#fnav [data-tab]').forEach((b) => b.addEventListener('click', () => {
@@ -410,7 +410,7 @@ function render(silent = false) {
   clearTimers();
   const h = location.hash || '#';
   const [page, a, b] = route();
-  if (ADMIN_MODE && page !== 'admin') return go('admin/orders');
+  if (ADMIN_MODE && page !== 'admin') return go('admin/home');
   const isTab = TABS.includes(page) && !ADMIN_MODE;
   let anim = 'anim-fade';
   if (!silent) {
@@ -424,7 +424,7 @@ function render(silent = false) {
   nav.classList.toggle('hide', !isTab);
   $$('#fnav [data-tab]').forEach((x) => x.classList.toggle('on', x.dataset.tab === page));
   $$('[data-i]').forEach((el) => { el.textContent = tr(el.dataset.i); });
-  const back = !isTab && !(ADMIN_MODE && page === 'admin') && page !== 'intro';
+  const back = !isTab && !isAdminHome() && page !== 'intro';
   setBack(back);
   document.body.classList.toggle('tg-back', !!(back && tg?.initData && tg.isVersionAtLeast?.('6.1')));
   const v = $('#view');
@@ -436,15 +436,15 @@ function render(silent = false) {
 // Telegram "Orqaga" tugmasi: faqat ichki sahifalarda ko'rinadi
 function setBack(on) {
   try { on ? tg.BackButton.show() : tg.BackButton.hide(); } catch {}
-  setTimeout(() => { try { const need = !!$('.story') || TABS.includes(route()[0]) === false && !(ADMIN_MODE && route()[0] === 'admin') && route()[0] !== 'intro'; need ? tg.BackButton.show() : tg.BackButton.hide(); } catch {} }, 300);
+  setTimeout(() => { try { const need = !!$('.story') || TABS.includes(route()[0]) === false && !isAdminHome() && route()[0] !== 'intro'; need ? tg.BackButton.show() : tg.BackButton.hide(); } catch {} }, 300);
 }
 function goBack() {
   const so = $('.story'); if (so) return so.close();
   if (!$('#sheetWrap').hidden) return closeSheet();
   const page = route()[0];
-  if (TABS.includes(page) || (ADMIN_MODE && page === 'admin')) { setBack(false); return; }
+  if ((TABS.includes(page) && !ADMIN_MODE) || isAdminHome()) { setBack(false); return; }
   if (stack.length > 1) history.back();
-  else { stack.length = 0; location.replace('#home'); }
+  else { stack.length = 0; location.replace(ADMIN_MODE ? '#admin/home' : '#home'); }
 }
 try { tg.BackButton.onClick(goBack); } catch {}
 // Ko'rinadigan ekran balandligi (Telegram iOS'da 100vh ishonchsiz)
@@ -1281,34 +1281,150 @@ function notifPrompt() {
   });
 }
 
-/* ================= ADMIN (alohida bot orqali /admin) ================= */
+/* ================= ADMIN (alohida bot orqali /admin) — sodda va ixcham ================= */
 const NEXT = { new: ['accepted', 'cancelled'], accepted: ['delivering', 'done', 'cancelled'], delivering: ['done', 'cancelled'] };
-const ICONS = ['carrot', 'apple', 'milk', 'egg', 'beef', 'fish', 'croissant', 'cookie', 'candy', 'ice-cream-cone', 'cup-soda', 'coffee', 'wine', 'wheat', 'soup', 'pizza', 'baby', 'spray-can', 'shirt', 'pill', 'dog', 'gift', 'package', 'percent'];
+const ICONS = ['carrot', 'apple', 'milk', 'egg', 'beef', 'fish', 'croissant', 'cookie', 'candy', 'ice-cream-cone', 'cup-soda', 'coffee', 'wheat', 'soup', 'baby', 'spray-can', 'shirt', 'pill', 'gift', 'package'];
+const isAdminHome = () => ADMIN_MODE && route()[0] === 'admin' && (!route()[1] || route()[1] === 'home');
 function adminOrderActions(o) {
   const n = NEXT[o.status]; if (!n) return '';
   return `<div class="actions">${n.map((s) => `<button class="btn sm ${s === 'cancelled' ? 'ghost' : ''}" data-st="${o.id}:${s}">${tr('st_' + s)}</button>`).join('')}</div>`;
 }
-async function admin(v, tab = 'orders') {
-  if (!S.me?.is_admin) { v.innerHTML = '<div class="top-space"></div>' + emptyState('shield-x', 'Ruxsat yo\'q', 'Admin panel faqat admin bot orqali ochiladi.'); return; }
-  const tabs = [['orders', 'Buyurtmalar'], ['products', 'Mahsulotlar'], ['categories', 'Kategoriyalar'], ['banners', 'Banner va istoriya'], ['recipes', 'Retseptlar'], ['stores', 'Do\'konlar'], ['faq', 'Savollar'], ['settings', 'Sozlamalar']];
-  v.innerHTML = `${navbar('Admin panel', false)}<div class="admin-tabs">${tabs.map(([k, t]) => `<button class="chip ${k === tab ? 'on' : ''}" data-tab2="${k}">${t}</button>`).join('')}</div><div id="adm"><div class="sk" style="height:120px;margin:0 16px"></div></div>`;
-  v.querySelectorAll('[data-tab2]').forEach((b) => b.onclick = () => { hap('light'); location.replace('#admin/' + b.dataset.tab2); });
-  $('.admin-tabs .chip.on')?.scrollIntoView({ inline: 'center', block: 'nearest' });
-  try {
-    if (!S.admin) S.admin = await api('/api/admin/all');
-    ({ orders: admOrders, products: admProducts, categories: admCategories, banners: admBanners, recipes: admRecipes, stores: admStores, faq: admFaq, settings: admSettings })[tab]?.($('#adm'));
-  } catch (err) { $('#adm').innerHTML = emptyState('cloud-off', err.message, ''); }
-}
 const reloadAdmin = async () => { S.admin = await api('/api/admin/all'); render(true); };
-const addBtn = (id, text) => `<div class="pad" style="margin-bottom:12px"><button class="btn" id="${id}">${ic('plus')}${text}</button></div>`;
 const listRows = (items, fn) => `<div class="box">${items.map(fn).join('') || '<div class="arow muted">—</div>'}</div>`;
 const iconOf = (x) => (x?.includes(':') ? x : 'lucide:' + (x || 'package'));
+const fab = (id, text) => `<button class="fab press" id="${id}">${ic('plus')}${text}</button>`;
 
+async function admin(v, tab = 'home') {
+  if (!S.me?.is_admin) { v.innerHTML = '<div class="top-space"></div>' + emptyState('shield-x', 'Ruxsat yo\'q', 'Admin panel faqat admin bot orqali ochiladi.'); return; }
+  const titles = { home: 'Green Market', orders: 'Buyurtmalar', products: 'Mahsulotlar', categories: 'Kategoriyalar', banners: 'Banner va istoriya', recipes: 'Retseptlar', stores: 'Do\'konlar', faq: 'Savollar', settings: 'Sozlamalar' };
+  v.innerHTML = `${navbar(titles[tab] || 'Admin', tab !== 'home')}<div id="adm"><div class="sk" style="height:120px;margin:0 16px"></div></div>`;
+  try {
+    if (!S.admin) S.admin = await api('/api/admin/all');
+    ({ home: admHome, orders: admOrders, products: admProducts, categories: admCategories, banners: admBanners, recipes: admRecipes, stores: admStores, faq: admFaq, settings: admSettings })[tab]?.($('#adm'));
+  } catch (err) { $('#adm').innerHTML = emptyState('cloud-off', err.message, ''); }
+}
+
+function admHome(box) {
+  const A = S.admin;
+  box.innerHTML = `<div class="stats" id="stats"><div class="stat sk" style="height:58px"></div><div class="stat sk"></div><div class="stat sk"></div></div>
+    <button class="scan-hero press" id="scanBtn"><span class="ic">${ic('scan-line')}</span><span><b>Skanerlash</b><small>Mahsulot shtrix-kodi yoki mijoz QR-kartasi</small></span></button>
+    <div class="atiles">
+      <button class="atile press" data-go="admin/orders">${ic('receipt-text')}<b>Buyurtmalar</b><small id="newCnt">…</small></button>
+      <button class="atile press" data-go="admin/products">${ic('package')}<b>Mahsulotlar</b><small>${A.products.filter((p) => p.active).length} ta</small></button>
+    </div>
+    <div class="label">Boshqaruv</div>
+    <div class="rows">
+      ${[['admin/categories', 'layout-grid', 'Kategoriyalar', `${A.categories.filter((c) => c.active).length} ta`], ['admin/banners', 'image', 'Banner va istoriya', `${A.banners.length} ta`],
+        ['admin/recipes', 'chef-hat', 'Retseptlar', `${(A.recipes || []).length} ta`], ['admin/stores', 'store', 'Do\'konlar', `${(A.stores || []).length} ta`],
+        ['admin/faq', 'circle-help', 'Savollar', `${A.faq.length} ta`], ['admin/settings', 'settings', 'Sozlamalar', 'Yetkazish, ball, ma\'lumot']]
+        .map(([to, i, t, s]) => `<button class="row" data-go="${to}">${ic(i)}<span class="tx">${t}<small>${s}</small></span><span class="chev">${ic('chevron-right')}</span></button>`).join('')}
+    </div>`;
+  $('#scanBtn').onclick = () => scanFlow();
+  api('/api/admin/stats').then((s) => { const el = $('#stats'); if (el) el.innerHTML = `<div class="stat"><b>${s.today_orders}</b><small>Bugun buyurtma</small></div><div class="stat"><b>${fmt(s.today_sum)}</b><small>Bugun, so'm</small></div><div class="stat"><b>${s.users}</b><small>Mijozlar</small></div>`; }).catch(() => {});
+  api('/api/admin/orders?status=new').then((l) => { const el = $('#newCnt'); if (el) el.innerHTML = l.length ? `<span class="nb">${l.length} yangi</span>` : 'Yangi yo\'q'; }).catch(() => {});
+}
+
+/* ---------- Skaner ---------- */
+let scanLib = null;
+function scannerSheet(title = 'Skaner') {
+  return new Promise((resolve) => {
+    let done = false, cam = null;
+    const finish = (code) => {
+      if (done) return; done = true;
+      try { cam?.stop().catch(() => {}); } catch {}
+      closeSheet(); resolve(code ? String(code).trim() : null);
+    };
+    openSheet(`<div style="text-align:center"><h2 style="margin:4px 0 2px;font-size:22px;font-weight:800">${e(title)}</h2>
+      <p class="muted" style="margin:0 0 14px;font-size:14px">Shtrix-kod yoki QR kodni kameraga qarating</p></div>
+      <div class="scanbox"><div id="qrReader"></div><div class="scanline"></div><div class="scanmsg" id="scanMsg">Kamera ochilmoqda…</div></div>
+      <div class="search-line" style="padding:12px 0 0"><label class="search-pill">${ic('keyboard')}<input id="manCode" inputmode="numeric" placeholder="Kodni qo'lda kiriting" enterkeyhint="go"></label><button class="sq-btn" id="manGo">${ic('arrow-right')}</button></div>
+      ${tg?.showScanQrPopup ? `<button class="btn ghost" id="tgQr" style="margin-top:10px">${ic('qr-code')}Telegram QR skaneri</button>` : ''}
+      <button class="btn text" data-close>Orqaga</button>`, async (root) => {
+      const man = () => { const c = $('#manCode', root).value.trim(); if (c) finish(c); };
+      $('#manGo', root).onclick = man;
+      $('#manCode', root).onkeydown = (ev) => { if (ev.key === 'Enter') man(); };
+      const tq = $('#tgQr', root);
+      if (tq) tq.onclick = () => { try { cam?.stop().catch(() => {}); } catch {} tg.showScanQrPopup({ text: 'Mijoz QR-kartasini skanerlang' }, (txt) => { tg.closeScanQrPopup(); setTimeout(() => finish(txt), 50); return true; }); };
+      const obs = new MutationObserver(() => { if ($('#sheetWrap').hidden || !$('#qrReader')) { obs.disconnect(); if (!done) { done = true; try { cam?.stop().catch(() => {}); } catch {} resolve(null); } } });
+      obs.observe($('#sheetWrap'), { attributes: true });
+      try {
+        if (!window.Html5Qrcode) { if (!scanLib) scanLib = loadScript('https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'); await scanLib; }
+        if (done) return;
+        const F = window.Html5QrcodeSupportedFormats;
+        cam = new window.Html5Qrcode('qrReader', { formatsToSupport: [F.QR_CODE, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39], verbose: false });
+        await cam.start({ facingMode: 'environment' }, { fps: 12, qrbox: (w, h) => ({ width: Math.min(w, 280), height: Math.min(h, 170) }), aspectRatio: 1.4 }, (txt) => { hap('success'); finish(txt); }, () => {});
+        const m = $('#scanMsg', root); if (m) m.remove();
+      } catch (err) {
+        const m = $('#scanMsg', root);
+        if (m) m.innerHTML = `${ic('camera-off')}<br>Kamera ochilmadi. Kodni qo'lda kiriting${tg?.showScanQrPopup ? ' yoki Telegram QR skaneridan foydalaning' : ''}.`;
+      }
+    });
+  });
+}
+async function scanFlow() {
+  const code = await scannerSheet();
+  if (!code) return;
+  let r;
+  try { r = await api('/api/admin/lookup?code=' + encodeURIComponent(code)); } catch (err) { return toast(err.message, 'error'); }
+  if (r.type === 'customer') return customerSheet(r.customer);
+  if (r.type === 'product') { toast('Mahsulot topildi'); return productForm(r.product); }
+  notFoundSheet(r);
+}
+function notFoundSheet(r) {
+  const sg = r.suggestion;
+  openSheet(`<div style="text-align:center"><div class="qmark">${ic('circle-help')}</div>
+      <h2 style="margin:6px 0 4px;font-size:22px;font-weight:800">${sg ? 'Yangi mahsulot' : 'Barkod topilmadi'}</h2>
+      <p class="muted" style="margin:0 0 14px;font-size:14px;line-height:1.45">${sg ? 'Bu barkod katalogingizda yo\'q. Internet bazasidan nomi topildi — tekshirib, mahsulot yarating.' : 'Bu barkod katalogingizda ham, internet bazasida ham yo\'q. Nomini o\'zingiz yozib mahsulot yarating.'}</p></div>
+    ${sg?.image ? `<div class="sgimg"><img src="${e(sg.image)}" alt=""></div>` : ''}
+    <div class="two dash"><div><small>Barkod</small><b>${e(r.barcode)}</b></div><div><small>Mahsulot nomi</small><b>${e(sg?.name || '—')}</b></div></div>
+    <button class="btn" id="mkP">${ic('plus')}Mahsulot yaratish</button><button class="btn text" data-close>Orqaga</button>`, (root) => {
+    $('#mkP', root).onclick = () => { closeSheet(); setTimeout(() => productForm(null, { barcode: r.barcode, name_uz: sg?.name || '', image: sg?.image || '' }), 380); };
+  });
+}
+function customerSheet(c) {
+  let mode = 'earn';
+  const draw = () => `<div class="cust"><div class="ava">${e((c.name || '?')[0].toUpperCase())}</div><div class="tx"><b>${e(c.name || 'Mijoz')}</b><small>${e(c.phone || '')} · GM-${c.id}</small></div></div>
+    <div class="two dash" style="margin-bottom:12px"><div><small>Balans</small><b>${fmt(c.coins)} ball</b></div><div><small>Daraja</small><b>${e(c.level?.name || '')} · ${c.level?.pct || 0}%</b></div></div>
+    <div class="segm"><button data-m="earn" class="${mode === 'earn' ? 'on' : ''}">Ball qo'shish</button><button data-m="spend" class="${mode === 'spend' ? 'on' : ''}">Ball bilan to'lash</button></div>
+    <div class="field" style="margin:0 0 6px"><label>Xarid summasi, so'm</label><input id="cAmt" inputmode="numeric" placeholder="Masalan 85 000"></div>
+    ${mode === 'spend' ? `<div class="field" style="margin:0 0 6px"><label>Yechiladigan ball (max ${fmt(c.coins)})</label><input id="cSpend" inputmode="numeric" placeholder="0"></div>` : ''}
+    <p class="muted" id="cCalc" style="font-size:14px;margin:4px 2px 12px;min-height:20px"></p>
+    <button class="btn" id="cGo">Tasdiqlash</button><button class="btn text" data-close>Yopish</button>`;
+  openSheet(sheetHead('Mijoz kartasi') + '<div id="cBody"></div>', (root) => {
+    const body = $('#cBody', root);
+    const num = (el) => parseInt(String(el?.value || '').replace(/\D/g, ''), 10) || 0;
+    const calc = () => {
+      const amt = num($('#cAmt', root)); const sp = Math.min(num($('#cSpend', root)), c.coins, amt || Infinity);
+      const paid = Math.max(0, amt - sp); const earn = Math.floor((paid * (c.level?.pct || 0)) / 100);
+      $('#cCalc', root).innerHTML = mode === 'spend'
+        ? (sp ? `Ball bilan: <b>${fmt(sp)}</b> · Naqd to'lanadi: <b>${fmt(paid)} so'm</b>${earn ? ` · +${fmt(earn)} ball` : ''}` : '')
+        : (amt ? `Mijozga <b>+${fmt(earn)} ball</b> qo'shiladi` : '');
+    };
+    const mount = () => {
+      body.innerHTML = draw();
+      body.querySelectorAll('[data-m]').forEach((b) => b.onclick = () => { mode = b.dataset.m; hap('light'); mount(); });
+      body.querySelectorAll('input').forEach((i) => i.oninput = () => { const n = num(i); i.value = n ? fmt(n) : ''; calc(); });
+      $('#cGo', root).onclick = async () => {
+        const amount = num($('#cAmt', root)); const spend = mode === 'spend' ? Math.min(num($('#cSpend', root)), c.coins) : 0;
+        if (!amount && !spend) return toast('Summani kiriting', 'error');
+        try {
+          const r = await api('/api/admin/customer/' + c.id, { method: 'POST', body: { amount, spend } });
+          c = r.customer; hap('success');
+          toast(`${r.spent ? `−${fmt(r.spent)} ball · ` : ''}${r.earned ? `+${fmt(r.earned)} ball` : 'Saqlandi'}`);
+          closeSheet();
+        } catch (err) { toast(err.message, 'error'); }
+      };
+      setTimeout(() => $('#cAmt', root)?.focus(), 350);
+    };
+    mount();
+  });
+}
+
+/* ---------- Buyurtmalar ---------- */
 async function admOrders(box) {
   const sts = ['new', 'accepted', 'delivering', 'done', 'cancelled', 'all'];
-  box.innerHTML = `<div class="stats" id="stats"></div><div class="admin-tabs" style="padding-top:0">${sts.map((s) => `<button class="chip ${S.adminStatus === s ? 'on' : ''}" data-fs="${s}">${s === 'all' ? 'Hammasi' : tr('st_' + s)}</button>`).join('')}</div><div id="aol"><div class="sk" style="height:140px;margin:0 16px"></div></div>`;
+  box.innerHTML = `<div class="admin-tabs">${sts.map((s) => `<button class="chip ${S.adminStatus === s ? 'on' : ''}" data-fs="${s}">${s === 'all' ? 'Hammasi' : tr('st_' + s)}</button>`).join('')}</div><div id="aol"><div class="sk" style="height:140px;margin:0 16px"></div></div>`;
   box.querySelectorAll('[data-fs]').forEach((b) => b.onclick = () => { S.adminStatus = b.dataset.fs; admOrders(box); });
-  api('/api/admin/stats').then((s) => { const el = $('#stats'); if (el) el.innerHTML = `<div class="stat"><b>${s.today_orders}</b><small>Bugun buyurtma</small></div><div class="stat"><b>${fmt(s.today_sum)}</b><small>Bugun, so'm</small></div><div class="stat"><b>${s.users}</b><small>Mijozlar</small></div>`; }).catch(() => {});
   const list = await api('/api/admin/orders?status=' + S.adminStatus);
   const aol = $('#aol'); if (!aol) return;
   aol.innerHTML = list.length ? list.map((o) => orderCard(o, true)).join('') : emptyState('receipt-text', 'Buyurtma yo\'q', '');
@@ -1320,111 +1436,129 @@ async function admOrders(box) {
     catch (err) { toast(err.message, 'error'); b.disabled = false; }
   });
 }
+
+/* ---------- Mahsulotlar ---------- */
 function admProducts(box) {
   const A = S.admin; const catName = (id) => A.categories.find((c) => c.id === id)?.name_uz || '—';
-  box.innerHTML = addBtn('addP', 'Mahsulot qo\'shish') + `<div class="search-line" style="padding-top:0"><label class="search-pill">${ic('search')}<input id="aq" placeholder="Qidirish…"></label></div><div id="apl"></div>`;
+  box.innerHTML = `<div class="search-line" style="padding-top:0"><label class="search-pill">${ic('search')}<input id="aq" placeholder="Nomi yoki barkod…"></label><button class="sq-btn" id="aScan">${ic('scan-line')}</button></div><div id="apl"></div>${fab('addP', 'Qo\'shish')}`;
   const draw = () => {
-    const q = $('#aq').value.toLowerCase();
-    $('#apl').innerHTML = listRows(A.products.filter((p) => p.name_uz.toLowerCase().includes(q)), (p) => `<button class="arow" data-id="${p.id}" style="${p.active ? '' : 'opacity:.4'}"><span class="thumb">${img(p.image)}</span>
-      <span class="tx">${e(p.name_uz)}<small>${fmt(p.price)} ${p.unit === 'kg' ? '/kg' : '/dona'} · ${e(catName(p.category_id))}${p.popular ? ' · 🔥' : ''}${p.coin_price ? ' · 🎁' + fmt(p.coin_price) : ''}${p.in_stock ? '' : ' · ❌ tugagan'}</small></span>${ic('pencil')}</button>`);
+    const q = $('#aq').value.toLowerCase().trim();
+    const list = A.products.filter((p) => p.active || q).filter((p) => !q || p.name_uz.toLowerCase().includes(q) || (p.barcode || '').includes(q));
+    $('#apl').innerHTML = listRows(list.slice(0, 200), (p) => `<button class="arow" data-id="${p.id}" style="${p.active ? '' : 'opacity:.4'}"><span class="thumb">${img(p.image)}</span>
+      <span class="tx">${e(p.name_uz)}<small>${fmt(p.price)} so'm${p.unit === 'kg' ? '/kg' : ''} · ${e(catName(p.category_id))}${p.in_stock ? '' : ' · tugagan'}</small></span><span class="chev">${ic('chevron-right')}</span></button>`);
     $('#apl').querySelectorAll('[data-id]').forEach((r) => r.onclick = () => productForm(A.products.find((p) => p.id === Number(r.dataset.id))));
   };
-  $('#aq').oninput = draw; draw(); $('#addP').onclick = () => productForm(null);
+  $('#aq').oninput = draw; draw();
+  $('#addP').onclick = () => productForm(null);
+  $('#aScan').onclick = () => scanFlow();
 }
-function productForm(p) {
+function productForm(p, preset = {}) {
   const A = S.admin;
-  formSheet('products', p, [
-    { k: 'image', t: 'image', label: 'Rasm (kvadrat)' },
-    { k: 'name_uz', label: 'Nomi (o\'zbekcha)', req: true }, { k: 'name_ru', label: 'Nomi (ruscha)' },
-    { k: 'category_id', t: 'select', label: 'Kategoriya', num: true, opts: [['', '—'], ...A.categories.map((c) => [c.id, c.name_uz])] },
-    { k: 'sub', label: 'Kichik bo\'lim (masalan: Bodringlar, Pomidorlar)' },
-    { k: 'unit', t: 'select', label: 'O\'lchov', opts: [['dona', 'Dona'], ['kg', 'Kilogramm']], def: 'dona' },
-    { k: 'price', t: 'number', label: 'Narxi (1 kg yoki 1 dona), so\'m', req: true },
-    { k: 'old_price', t: 'number', label: 'Eski narx (chegirma % chiqadi)' },
-    { k: 'piece_kg', t: 'number', step: '0.001', label: 'Kilolik: 1 dona ≈ necha kg (dona bilan sotish uchun)' },
-    { k: 'min_kg', t: 'number', step: '0.001', label: 'Kilolik: minimal kg', def: 0.1 },
-    { k: 'coin_price', t: 'number', label: 'Ballga sovg\'a: necha ball (bo\'sh = yo\'q)' },
-    { k: 'desc_uz', t: 'textarea', label: 'Tavsif (o\'zbekcha)' }, { k: 'desc_ru', t: 'textarea', label: 'Tavsif (ruscha)' },
-    { k: 'sort', t: 'number', label: 'Tartib raqami', def: 0 },
-    { k: 'popular', t: 'switch', label: '🔥 Ommabop', def: false },
+  formSheet('products', p || null, [
+    { k: 'image', t: 'image', label: 'Rasm', small: true },
+    { k: 'name_uz', label: 'Mahsulot nomi', req: true },
+    { k: 'barcode', t: 'barcode', label: 'Barkod' },
+    { k: 'unit', t: 'seg', label: 'O\'lchov', opts: [['dona', 'Dona'], ['kg', 'Kg']], def: 'dona' },
+    { k: 'price', t: 'number', label: 'Sotuv narxi, so\'m', req: true, half: true },
+    { k: 'old_price', t: 'number', label: 'Eski narx (chegirma)', half: true },
+    { k: 'category_id', t: 'select', label: 'Kategoriya', num: true, opts: [['', '—'], ...A.categories.filter((c) => c.active).map((c) => [c.id, c.name_uz])] },
     { k: 'in_stock', t: 'switch', label: 'Sotuvda bor', def: true },
-    { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true },
-  ]);
+    { k: 'sub', label: 'Kichik bo\'lim (masalan: Pomidorlar)', adv: true },
+    { k: 'name_ru', label: 'Nomi (ruscha)', adv: true },
+    { k: 'desc_uz', t: 'textarea', label: 'Tavsif', adv: true },
+    { k: 'piece_kg', t: 'number', step: '0.001', label: 'Kilolik: 1 dona ≈ kg', adv: true, half: true },
+    { k: 'min_kg', t: 'number', step: '0.001', label: 'Kilolik: min kg', def: 0.1, adv: true, half: true },
+    { k: 'coin_price', t: 'number', label: 'Ballga sovg\'a (ball)', adv: true, half: true },
+    { k: 'sort', t: 'number', label: 'Tartib', def: 0, adv: true, half: true },
+    { k: 'popular', t: 'switch', label: '🔥 Ommabop', def: false, adv: true },
+    { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true, adv: true },
+  ], null, p ? null : preset);
 }
+
+/* ---------- Kategoriyalar, bannerlar, do'konlar, savollar, retseptlar ---------- */
 function admCategories(box) {
-  box.innerHTML = addBtn('addC', 'Kategoriya qo\'shish') + listRows(S.admin.categories, (c) => `<button class="arow" data-id="${c.id}" style="${c.active ? '' : 'opacity:.4'}">
-    <span class="thumb">${c.image ? img(c.image) : `<iconify-icon icon="${e(iconOf(c.icon))}"></iconify-icon>`}</span><span class="tx">${e(c.name_uz)}<small>${e(c.grp || '—')}</small></span>${ic('pencil')}</button>`);
+  box.innerHTML = listRows(S.admin.categories.filter((c) => c.active), (c) => `<button class="arow" data-id="${c.id}">
+    <span class="thumb">${c.image ? img(c.image) : `<iconify-icon icon="${e(iconOf(c.icon))}"></iconify-icon>`}</span><span class="tx">${e(c.name_uz)}<small>${e(c.grp || '—')}</small></span><span class="chev">${ic('chevron-right')}</span></button>`) + fab('addC', 'Qo\'shish');
   const groups = [...new Set(S.admin.categories.map((c) => c.grp).filter(Boolean))];
   const form = (c) => formSheet('categories', c, [
-    { k: 'image', t: 'image', label: 'Rasm (fonsiz PNG yaxshi)' },
-    { k: 'name_uz', label: 'Nomi (o\'zbekcha)', req: true }, { k: 'name_ru', label: 'Nomi (ruscha)' },
-    { k: 'grp', label: `Bo'lim (katalogda guruh)${groups.length ? ': ' + groups.join(', ') : ''}` },
-    { k: 'icon', t: 'icon', label: 'Ikonka (rasm bo\'lmasa)', def: 'lucide:package' },
-    { k: 'sort', t: 'number', label: 'Tartib', def: 0 },
-    { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true },
+    { k: 'image', t: 'image', label: 'Rasm', small: true },
+    { k: 'name_uz', label: 'Nomi', req: true },
+    { k: 'grp', t: 'datalist', label: 'Bo\'lim (katalogdagi guruh)', opts: groups },
+    { k: 'name_ru', label: 'Nomi (ruscha)', adv: true },
+    { k: 'icon', t: 'icon', label: 'Ikonka (rasm bo\'lmasa)', def: 'lucide:package', adv: true },
+    { k: 'sort', t: 'number', label: 'Tartib', def: 0, adv: true },
+    { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true, adv: true },
   ]);
   $('#addC').onclick = () => form(null);
   box.querySelectorAll('[data-id]').forEach((r) => r.onclick = () => form(S.admin.categories.find((c) => c.id === Number(r.dataset.id))));
 }
 function admBanners(box) {
   const A = S.admin;
-  box.innerHTML = `<div class="pad"><div class="note">${ic('info')}<span><b>Promo karta</b> — asosiy sahifadagi aylanib turadigan kartalar (rasm 2:1).<br><b>Brend bloki</b> — rangli katta blok: sarlavha, rasm va bog'langan kategoriya mahsulotlari.</span></div></div>` +
-    addBtn('addB', 'Banner qo\'shish') +
-    listRows(A.banners, (b) => `<button class="arow" data-id="${b.id}" style="${b.active ? '' : 'opacity:.4'}"><span class="thumb" style="${b.style === 'block' ? `background:${e(b.color || '#e11d2a')}` : ''}">${img(b.image)}</span><span class="tx">${e(b.title || 'Banner #' + b.id)}<small>${b.style === 'block' ? 'Brend bloki' : 'Promo karta'} · ${b.link_type === 'none' ? '—' : b.link_type + ' #' + b.link_id}</small></span>${ic('pencil')}</button>`);
-  const linkOpts = [['none:', '— hech qayerga'], ...A.categories.map((c) => [`category:${c.id}`, '📂 ' + c.name_uz]), ...A.products.filter((p) => p.active).map((p) => [`product:${p.id}`, '🛒 ' + p.name_uz])];
+  box.innerHTML = listRows(A.banners, (b) => `<button class="arow" data-id="${b.id}" style="${b.active ? '' : 'opacity:.4'}"><span class="thumb" style="background:${e(b.color || 'var(--surface)')}">${img(b.image)}</span><span class="tx">${e(b.title || 'Banner #' + b.id)}<small>${b.style === 'block' ? 'Rangli blok' : `Promo karta · ${storiesOf(b).length} ta istoriya`}</small></span><span class="chev">${ic('chevron-right')}</span></button>`) + fab('addB', 'Qo\'shish');
+  const linkOpts = [['none:', '— hech qayerga'], ...A.categories.filter((c) => c.active).map((c) => [`category:${c.id}`, '📂 ' + c.name_uz]), ...A.products.filter((p) => p.active).map((p) => [`product:${p.id}`, '🛒 ' + p.name_uz])];
   const form = (b) => formSheet('banners', b ? { ...b, link: `${b.link_type}:${b.link_id ?? ''}` } : null, [
-    { k: 'style', t: 'select', label: 'Turi', opts: [['card', 'Promo karta'], ['block', 'Brend bloki']], def: 'card' },
-    { k: 'image', t: 'image', label: 'Rasm' },
-    { k: 'title', label: 'Sarlavha' }, { k: 'subtitle', label: 'Qo\'shimcha matn' },
-    { k: 'color', t: 'color', label: 'Fon rangi (karta / blok)', def: '#eaf6ec' },
-    { k: 'story_title', label: 'Istoriya sarlavhasi (masalan: Bonuslar)' },
-    { k: 'stories', t: 'stories', label: 'Istoriya slaydlari (bannerga bosilganda ochiladi)' },
-    { k: 'link', t: 'select', label: 'Bog\'lash (bosilganda / blok mahsulotlari)', opts: linkOpts, def: 'none:' },
-    { k: 'sort', t: 'number', label: 'Tartib', def: 0 },
-    { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true },
+    { k: 'style', t: 'seg', label: 'Turi', opts: [['card', 'Promo karta'], ['block', 'Rangli blok']], def: 'card' },
+    { k: 'title', label: 'Sarlavha', req: true }, { k: 'subtitle', label: 'Kichik matn' },
+    { k: 'image', t: 'image', label: 'Rasm', small: true },
+    { k: 'color', t: 'color', label: 'Fon rangi', def: '#eaf6ec' },
+    { k: 'link', t: 'select', label: 'Bosilganda / blok mahsulotlari', opts: linkOpts, def: 'none:' },
+    { k: 'stories', t: 'stories', label: 'Istoriya slaydlari' },
+    { k: 'story_title', label: 'Istoriya sarlavhasi', adv: true },
+    { k: 'sort', t: 'number', label: 'Tartib', def: 0, adv: true },
+    { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true, adv: true },
   ], (data) => { const [lt, lid] = String(data.link || 'none:').split(':'); delete data.link; data.link_type = lt; data.link_id = lid ? Number(lid) : null; return data; });
   $('#addB').onclick = () => form(null);
   box.querySelectorAll('[data-id]').forEach((r) => r.onclick = () => form(A.banners.find((b) => b.id === Number(r.dataset.id))));
 }
 function admStores(box) {
-  box.innerHTML = `<div class="pad"><div class="note">${ic('info')}<span>Koordinatani Google Maps'dan oling: joyni bosib turing → raqamlarni nusxalang (masalan 39.0573, 66.8341).</span></div></div>` + addBtn('addS', 'Do\'kon qo\'shish') +
-    listRows(S.admin.stores || [], (s) => `<button class="arow" data-id="${s.id}" style="${s.active ? '' : 'opacity:.4'}"><span class="thumb">${ic('store')}</span><span class="tx">${e(s.name)}<small>${e(s.address || '')} · ${s.lat}, ${s.lng}</small></span>${ic('pencil')}</button>`);
+  box.innerHTML = listRows(S.admin.stores || [], (s) => `<button class="arow" data-id="${s.id}" style="${s.active ? '' : 'opacity:.4'}"><span class="thumb">${ic('store')}</span><span class="tx">${e(s.name)}<small>${e(s.address || '')}</small></span><span class="chev">${ic('chevron-right')}</span></button>`) + fab('addS', 'Qo\'shish');
   const form = (s) => formSheet('stores', s ? { ...s, coords: `${s.lat}, ${s.lng}` } : null, [
     { k: 'name', label: 'Nomi', req: true }, { k: 'address', label: 'Manzil' },
-    { k: 'coords', label: 'Koordinata (kenglik, uzunlik)', req: true }, { k: 'hours', label: 'Ish vaqti' }, { k: 'phone', label: 'Telefon' },
-    { k: 'sort', t: 'number', label: 'Tartib', def: 0 }, { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true },
-  ], (d) => { const [lat, lng] = String(d.coords || '').split(/[,\s]+/).map(Number); delete d.coords; if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('Koordinata noto\'g\'ri'); d.lat = lat; d.lng = lng; return d; });
+    { k: 'coords', t: 'coords', label: 'Joylashuv (kenglik, uzunlik)', req: true },
+    { k: 'hours', label: 'Ish vaqti', half: true }, { k: 'phone', label: 'Telefon', half: true },
+    { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true, adv: true }, { k: 'sort', t: 'number', label: 'Tartib', def: 0, adv: true },
+  ], (d) => { const [lat, lng] = String(d.coords || '').split(/[,\s]+/).map(Number); delete d.coords; if (!Number.isFinite(lat) || !Number.isFinite(lng)) throw new Error('Joylashuv noto\'g\'ri'); d.lat = lat; d.lng = lng; return d; });
   $('#addS').onclick = () => form(null);
   box.querySelectorAll('[data-id]').forEach((r) => r.onclick = () => form(S.admin.stores.find((s) => s.id === Number(r.dataset.id))));
 }
 function admFaq(box) {
-  box.innerHTML = addBtn('addF', 'Savol qo\'shish') + listRows(S.admin.faq, (f) => `<button class="arow" data-id="${f.id}"><span class="thumb">${ic('circle-help')}</span><span class="tx">${e(f.q_uz)}<small>${e(f.a_uz)}</small></span>${ic('pencil')}</button>`);
+  box.innerHTML = listRows(S.admin.faq, (f) => `<button class="arow" data-id="${f.id}"><span class="thumb">${ic('circle-help')}</span><span class="tx">${e(f.q_uz)}<small>${e(f.a_uz)}</small></span><span class="chev">${ic('chevron-right')}</span></button>`) + fab('addF', 'Qo\'shish');
   const form = (f) => formSheet('faq', f, [
-    { k: 'q_uz', label: 'Savol (o\'zbekcha)', req: true }, { k: 'a_uz', t: 'textarea', label: 'Javob (o\'zbekcha)', req: true },
-    { k: 'q_ru', label: 'Savol (ruscha)' }, { k: 'a_ru', t: 'textarea', label: 'Javob (ruscha)' }, { k: 'sort', t: 'number', label: 'Tartib', def: 0 },
+    { k: 'q_uz', label: 'Savol', req: true }, { k: 'a_uz', t: 'textarea', label: 'Javob', req: true },
+    { k: 'q_ru', label: 'Savol (ruscha)', adv: true }, { k: 'a_ru', t: 'textarea', label: 'Javob (ruscha)', adv: true }, { k: 'sort', t: 'number', label: 'Tartib', def: 0, adv: true },
   ]);
   $('#addF').onclick = () => form(null);
   box.querySelectorAll('[data-id]').forEach((r) => r.onclick = () => form(S.admin.faq.find((f) => f.id === Number(r.dataset.id))));
 }
+function admRecipes(box) {
+  box.innerHTML = listRows(S.admin.recipes || [], (r) => `<button class="arow" data-id="${r.id}" style="${r.active ? '' : 'opacity:.4'}"><span class="thumb">${img(r.image, 'chef-hat')}</span><span class="tx">${e(r.title_uz)}<small>${(r.product_ids || []).length} ta mahsulot</small></span><span class="chev">${ic('chevron-right')}</span></button>`) + fab('addR', 'Qo\'shish');
+  const form = (r) => formSheet('recipes', r, [
+    { k: 'image', t: 'image', label: 'Rasm', small: true }, { k: 'title_uz', label: 'Nomi', req: true },
+    { k: 'body_uz', t: 'textarea', label: 'Tayyorlanishi' }, { k: 'product_ids', t: 'products', label: 'Kerakli mahsulotlar' },
+    { k: 'title_ru', label: 'Nomi (ruscha)', adv: true }, { k: 'body_ru', t: 'textarea', label: 'Tayyorlanishi (ruscha)', adv: true },
+    { k: 'sort', t: 'number', label: 'Tartib', def: 0, adv: true }, { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true, adv: true },
+  ]);
+  $('#addR').onclick = () => form(null);
+  box.querySelectorAll('[data-id]').forEach((b) => b.onclick = () => form(S.admin.recipes.find((r) => r.id === Number(b.dataset.id))));
+}
+
+/* ---------- Sozlamalar ---------- */
 function admSettings(box) {
   const st = S.admin.settings;
   const shop = st.shop || {}, d = st.delivery || {}, c = st.coins || {}, b = st.banner || {}, th = st.theme || {}, inf = st.info || {};
   const lv = Array.isArray(c.levels) && c.levels.length ? c.levels : [{ name: 'Bronza', pct: 1, from: 0 }];
   const f = (id, label, val, type = 'text') => `<div class="field"><label>${label}</label><input id="${id}" type="${type}" value="${e(val ?? '')}"></div>`;
   const ta = (id, label, val) => `<div class="field"><label>${label}</label><textarea id="${id}" rows="3">${e(val ?? '')}</textarea></div>`;
-  const h = (t) => `<div class="label">${t}</div>`;
-  box.innerHTML = `${h('Do\'kon')}${f('s_name', 'Nomi', shop.name)}${f('s_phone', 'Telefon', shop.phone)}${f('s_hours', 'Ish vaqti', shop.work_hours)}
-    ${h('Ko\'rinish')}<div class="field"><label>Brend rangi (ball, belgilar)</label><input id="s_accent" type="color" value="${e(th.accent || '#16a34a')}" style="padding:4px"></div>
-    ${f('s_bi', 'Promo kartalar aylanish oralig\'i, ms (1000 = 1 soniya)', b.interval_ms ?? 3000, 'number')}
-    ${h('Yetkazib berish')}${f('s_fee', 'Narxi, so\'m', d.fee ?? 0, 'number')}${f('s_free', 'Shu summadan bepul (0 = yo\'q)', d.free_from ?? 0, 'number')}${f('s_min', 'Minimal buyurtma, so\'m', d.min_order ?? 0, 'number')}
-    ${h('Ball tizimi — darajalar')}<div class="pad"><div class="lvl-edit muted" style="font-size:12px"><span>Nomi</span><span>% ball</span><span>Shu summadan, so'm</span></div>
-      <div id="lvls">${lv.map((l) => `<div class="lvl-edit"><input value="${e(l.name)}"><input type="number" step="0.1" value="${l.pct}"><input type="number" value="${l.from}"></div>`).join('')}</div>
-      <button class="btn ghost sm" id="addLvl" style="margin-bottom:12px">${ic('plus')}Daraja qo'shish</button></div>
-    ${f('s_bday', 'Tug\'ilgan kun sovg\'asi, ball', c.birthday_bonus ?? 0, 'number')}
-    <div class="box"><div class="arow"><span class="tx">Ball tizimi yoqilgan</span><button class="switch ${c.enabled !== false ? 'on' : ''}" id="s_cen"></button></div></div>
-    ${h('Ma\'lumot sahifalari')}${ta('i_about', 'Biz haqimizda', inf.about)}${ta('i_del', 'Yetkazib berish shartlari', inf.delivery)}${ta('i_ret', 'Qaytarish va almashtirish', inf.returns)}
-    ${f('i_ig', 'Instagram havola', inf.instagram)}${f('i_tg', 'Telegram kanal havola', inf.telegram)}
-    <div class="pad"><button class="btn" id="s_save">${tr('save')}</button></div>`;
+  const sec = (t, body, open = false) => `<details class="acc" ${open ? 'open' : ''}><summary>${t}${ic('chevron-down')}</summary><div class="acc-b">${body}</div></details>`;
+  box.innerHTML = `
+    ${sec('Do\'kon', `${f('s_name', 'Nomi', shop.name)}<div class="two">${f('s_phone', 'Telefon', shop.phone)}${f('s_hours', 'Ish vaqti', shop.work_hours)}</div>`, true)}
+    ${sec('Yetkazib berish', `<div class="two">${f('s_fee', 'Narxi, so\'m', d.fee ?? 0, 'number')}${f('s_min', 'Min. buyurtma', d.min_order ?? 0, 'number')}</div>${f('s_free', 'Shu summadan bepul (0 = yo\'q)', d.free_from ?? 0, 'number')}`)}
+    ${sec('Ball tizimi', `<div class="box" style="margin:0 16px 10px"><div class="arow"><span class="tx">Ball tizimi yoqilgan</span><button class="switch ${c.enabled !== false ? 'on' : ''}" id="s_cen"></button></div></div>
+      <div class="pad"><div class="lvl-edit muted" style="font-size:12px"><span>Daraja</span><span>%</span><span>Shu summadan</span></div><div id="lvls">${lv.map((l) => `<div class="lvl-edit"><input value="${e(l.name)}"><input type="number" step="0.1" value="${l.pct}"><input type="number" value="${l.from}"></div>`).join('')}</div>
+      <button class="btn ghost sm" id="addLvl" style="margin-bottom:12px">${ic('plus')}Daraja</button></div>${f('s_bday', 'Tug\'ilgan kun sovg\'asi, ball', c.birthday_bonus ?? 0, 'number')}`)}
+    ${sec('Ko\'rinish', `<div class="two"><div class="field"><label>Brend rangi</label><input id="s_accent" type="color" value="${e(th.accent || '#16a34a')}" style="padding:4px"></div>${f('s_bi', 'Promo aylanishi, ms', b.interval_ms ?? 3000, 'number')}</div>`)}
+    ${sec('Ma\'lumot sahifalari', `${ta('i_about', 'Biz haqimizda', inf.about)}${ta('i_del', 'Yetkazib berish shartlari', inf.delivery)}${ta('i_ret', 'Qaytarish va almashtirish', inf.returns)}<div class="two">${f('i_ig', 'Instagram', inf.instagram)}${f('i_tg', 'Telegram', inf.telegram)}</div>`)}
+    <div style="height:90px"></div><div class="paybar"><button class="btn" id="s_save">${tr('save')}</button></div>`;
   $('#s_cen').onclick = (ev) => ev.currentTarget.classList.toggle('on');
   $('#addLvl').onclick = () => { const r = document.createElement('div'); r.className = 'lvl-edit'; r.innerHTML = '<input placeholder="Nomi"><input type="number" step="0.1" placeholder="%"><input type="number" placeholder="so\'m">'; $('#lvls').appendChild(r); };
   $('#s_save').onclick = async () => {
@@ -1436,45 +1570,90 @@ function admSettings(box) {
         shop: { name: val('#s_name'), phone: val('#s_phone'), work_hours: val('#s_hours') },
         delivery: { fee: n('#s_fee'), free_from: n('#s_free'), min_order: n('#s_min') },
         coins: { enabled: $('#s_cen').classList.contains('on'), birthday_bonus: n('#s_bday'), levels: levelsArr },
-        banner: { interval_ms: Math.max(1000, n('#s_bi')) },
-        theme: { accent: val('#s_accent') },
+        banner: { interval_ms: Math.max(1000, n('#s_bi')) }, theme: { accent: val('#s_accent') },
         info: { about: val('#i_about'), delivery: val('#i_del'), returns: val('#i_ret'), instagram: val('#i_ig'), telegram: val('#i_tg') },
       } });
       toast(tr('saved'), 'success');
     } catch (err) { toast(err.message, 'error'); }
   };
 }
+
+/* ---------- Umumiy forma (BILLZ kabi ixcham: asosiy maydonlar + "Maydonlarni ochish") ---------- */
 function storyRow(x) {
   return `<div class="strow"><button type="button" class="stimg" data-stimg>${x.image ? `<img src="${e(x.image)}">` : ic('image-plus')}</button><input type="hidden" data-si value="${e(x.image || '')}">
     <div class="stf"><input data-st placeholder="Sarlavha" value="${e(x.title || '')}"><input data-sx placeholder="Matn" value="${e(x.text || '')}"></div><button type="button" class="trash muted" data-strm>${ic('x')}</button></div>`;
 }
-function admRecipes(box) {
-  box.innerHTML = addBtn('addR', 'Retsept qo\'shish') + listRows(S.admin.recipes || [], (r) => `<button class="arow" data-id="${r.id}" style="${r.active ? '' : 'opacity:.4'}"><span class="thumb">${img(r.image, 'chef-hat')}</span><span class="tx">${e(r.title_uz)}<small>${(r.product_ids || []).length} ta mahsulot</small></span>${ic('pencil')}</button>`);
-  const form = (r) => formSheet('recipes', r, [
-    { k: 'image', t: 'image', label: 'Rasm' }, { k: 'title_uz', label: 'Nomi (o\'zbekcha)', req: true }, { k: 'title_ru', label: 'Nomi (ruscha)' },
-    { k: 'body_uz', t: 'textarea', label: 'Tayyorlanishi (o\'zbekcha)' }, { k: 'body_ru', t: 'textarea', label: 'Tayyorlanishi (ruscha)' },
-    { k: 'product_ids', t: 'products', label: 'Kerakli mahsulotlar' }, { k: 'sort', t: 'number', label: 'Tartib', def: 0 }, { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true },
-  ]);
-  $('#addR').onclick = () => form(null);
-  box.querySelectorAll('[data-id]').forEach((b) => b.onclick = () => form(S.admin.recipes.find((r) => r.id === Number(b.dataset.id))));
+function fieldHtml(f, v) {
+  const lab = `<label>${f.label}${f.req ? ' *' : ''}</label>`;
+  if (f.t === 'image') return `<div class="field fimg-row">${f.small ? `<button type="button" class="img-sq" data-img="${f.k}">${v ? `<img src="${e(v)}">` : ic('image-plus')}</button><div class="muted" style="font-size:13px">Rasm yuklang<br><small>JPG yoki PNG</small></div>` : `${lab}<button type="button" class="img-pick" data-img="${f.k}">${v ? `<img src="${e(v)}">` : ic('image-plus')}</button>`}<input type="hidden" data-k="${f.k}" value="${e(v)}"></div>`;
+  if (f.t === 'select') return `<div class="field">${lab}<select data-k="${f.k}">${f.opts.map(([k, t]) => `<option value="${e(k)}" ${String(k) === String(v) ? 'selected' : ''}>${e(t)}</option>`).join('')}</select></div>`;
+  if (f.t === 'seg') return `<div class="field">${lab}<input type="hidden" data-k="${f.k}" value="${e(v)}"><div class="segm" style="margin:0">${f.opts.map(([k, t]) => `<button type="button" data-seg="${f.k}" data-v="${e(k)}" class="${String(k) === String(v) ? 'on' : ''}">${e(t)}</button>`).join('')}</div></div>`;
+  if (f.t === 'switch') return `<div class="box" style="margin:0 0 10px"><div class="arow"><span class="tx">${f.label}</span><button type="button" class="switch ${v ? 'on' : ''}" data-sw="${f.k}"></button></div></div>`;
+  if (f.t === 'textarea') return `<div class="field">${lab}<textarea data-k="${f.k}" rows="2">${e(v)}</textarea></div>`;
+  if (f.t === 'color') return `<div class="field">${lab}<input data-k="${f.k}" type="color" value="${e(v || '#eaf6ec')}" style="padding:4px"></div>`;
+  if (f.t === 'barcode') return `<div class="field">${lab}<div class="inrow"><input data-k="${f.k}" inputmode="numeric" value="${e(v)}" placeholder="Skanerlang yoki yozing"><button type="button" class="sq-btn" data-bscan>${ic('scan-line')}</button></div><div class="hint" id="bcHint"></div></div>`;
+  if (f.t === 'coords') return `<div class="field">${lab}<div class="inrow"><input data-k="${f.k}" value="${e(v)}" placeholder="39.0573, 66.8341"><button type="button" class="sq-btn" data-here>${ic('locate-fixed')}</button></div><div class="hint">📍 tugmasi — hozir turgan joyingizni oladi</div></div>`;
+  if (f.t === 'datalist') return `<div class="field">${lab}<input data-k="${f.k}" value="${e(v)}" list="dl_${f.k}"><datalist id="dl_${f.k}">${f.opts.map((o) => `<option value="${e(o)}">`).join('')}</datalist></div>`;
+  if (f.t === 'stories') return `<div class="field">${lab}<div id="stList">${(Array.isArray(v) ? v : []).map(storyRow).join('')}</div><button class="btn ghost sm" id="stAdd" type="button">${ic('plus')}Slayd</button></div>`;
+  if (f.t === 'products') return `<div class="field">${lab}<div class="pchk">${S.admin.products.filter((x) => x.active).map((x) => `<label><input type="checkbox" data-pid="${x.id}" ${(v || []).includes(x.id) ? 'checked' : ''}> ${e(x.name_uz)}</label>`).join('')}</div></div>`;
+  if (f.t === 'icon') return `<div class="field">${lab}<input type="hidden" data-k="${f.k}" value="${e(v)}"><div class="chips">${ICONS.map((n) => `<button type="button" class="chip ${v === 'lucide:' + n ? 'on' : ''}" data-icon="lucide:${n}" style="font-size:19px;height:40px">${ic(n)}</button>`).join('')}</div></div>`;
+  return `<div class="field">${lab}<input data-k="${f.k}" ${f.t === 'number' ? `type="text" inputmode="decimal"` : ''} value="${e(v)}"></div>`;
 }
-function formSheet(entity, item, fields, transform) {
-  const val = (f) => (item && item[f.k] !== undefined && item[f.k] !== null ? item[f.k] : f.def ?? '');
-  const html = sheetHead(item ? tr('edit') : 'Yangi') + fields.map((f) => {
-    const v = val(f);
-    if (f.t === 'image') return `<div class="field"><label>${f.label}</label><button class="img-pick" data-img="${f.k}">${v ? `<img src="${e(v)}">` : ic('image-plus') + '&nbsp;Rasm tanlash'}</button><input type="hidden" data-k="${f.k}" value="${e(v)}"></div>`;
-    if (f.t === 'select') return `<div class="field"><label>${f.label}</label><select data-k="${f.k}">${f.opts.map(([k, t]) => `<option value="${e(k)}" ${String(k) === String(v) ? 'selected' : ''}>${e(t)}</option>`).join('')}</select></div>`;
-    if (f.t === 'switch') return `<div class="box" style="margin:0 0 10px"><div class="arow"><span class="tx">${f.label}</span><button class="switch ${v ? 'on' : ''}" data-sw="${f.k}"></button></div></div>`;
-    if (f.t === 'textarea') return `<div class="field"><label>${f.label}</label><textarea data-k="${f.k}" rows="2">${e(v)}</textarea></div>`;
-    if (f.t === 'stories') return `<div class="field"><label>${f.label}</label><div id="stList">${(Array.isArray(v) ? v : []).map(storyRow).join('')}</div>
-      <button class="btn ghost sm" id="stAdd" type="button">${ic('plus')}Slayd qo'shish</button></div>`;
-    if (f.t === 'products') return `<div class="field"><label>${f.label}</label><div class="pchk">${S.admin.products.filter((x) => x.active).map((x) => `<label><input type="checkbox" data-pid="${x.id}" ${(v || []).includes(x.id) ? 'checked' : ''}> ${e(x.name_uz)}</label>`).join('')}</div></div>`;
-    if (f.t === 'color') return `<div class="field"><label>${f.label}</label><input data-k="${f.k}" type="color" value="${e(v || '#e11d2a')}" style="padding:4px"></div>`;
-    if (f.t === 'icon') return `<div class="field"><label>${f.label}</label><input type="hidden" data-k="${f.k}" value="${e(v)}"><div class="chips">${ICONS.map((n) => `<button class="chip ${v === 'lucide:' + n ? 'on' : ''}" data-icon="lucide:${n}" style="font-size:19px;height:40px">${ic(n)}</button>`).join('')}</div></div>`;
-    return `<div class="field"><label>${f.label}${f.req ? ' *' : ''}</label><input data-k="${f.k}" ${f.t === 'number' ? `type="number" inputmode="decimal" step="${f.step || '1'}"` : ''} value="${e(v)}"></div>`;
-  }).join('') + `<button class="btn" id="fSave">${tr('save')}</button>${item ? `<button class="btn danger" id="fDel" style="margin-top:4px">${ic('trash-2')}${tr('remove')}</button>` : ''}`;
+function formSheet(entity, item, fields, transform, preset = {}) {
+  const val = (f) => (f.k in preset ? preset[f.k] ?? '' : item && item[f.k] !== undefined && item[f.k] !== null ? item[f.k] : f.def ?? '');
+  const group = (list) => {
+    let out = '', i = 0;
+    while (i < list.length) {
+      const f = list[i];
+      if (f.half && list[i + 1]?.half) { out += `<div class="two">${fieldHtml(f, val(f))}${fieldHtml(list[i + 1], val(list[i + 1]))}</div>`; i += 2; }
+      else { out += fieldHtml(f, val(f)); i += 1; }
+    }
+    return out;
+  };
+  const main = fields.filter((f) => !f.adv), adv = fields.filter((f) => f.adv);
+  const html = sheetHead(item ? tr('edit') : 'Yangi') + group(main) +
+    (adv.length ? `<div class="advbox" hidden>${group(adv)}</div><button type="button" class="btn ghost sm more-f" id="advT">${ic('chevron-down')}Maydonlarni ochish</button>` : '') +
+    `<button class="btn" id="fSave">${tr('save')}</button>${item ? `<button class="btn danger" id="fDel" style="margin-top:4px">${ic('trash-2')}${tr('remove')}</button>` : ''}`;
   openSheet(html, (root) => {
-    root.querySelectorAll('[data-sw]').forEach((s) => s.onclick = () => s.classList.toggle('on'));
+    const advT = $('#advT', root);
+    if (advT) advT.onclick = () => { const b = $('.advbox', root); b.hidden = !b.hidden; advT.innerHTML = `${ic(b.hidden ? 'chevron-down' : 'chevron-up')}${b.hidden ? 'Maydonlarni ochish' : 'Maydonlarni yashirish'}`; hap('light'); };
+    root.querySelectorAll('[data-sw]').forEach((s) => s.onclick = () => { s.classList.toggle('on'); hap('light'); });
+    root.querySelectorAll('[data-seg]').forEach((b) => b.onclick = () => { root.querySelectorAll(`[data-seg="${b.dataset.seg}"]`).forEach((x) => x.classList.toggle('on', x === b)); root.querySelector(`[data-k="${b.dataset.seg}"]`).value = b.dataset.v; hap('light'); });
+    root.querySelectorAll('[data-icon]').forEach((b) => b.onclick = () => { root.querySelectorAll('[data-icon]').forEach((x) => x.classList.toggle('on', x === b)); b.closest('.field').querySelector('[data-k]').value = b.dataset.icon; });
+    const setImg = (k, url) => { root.querySelector(`[data-k="${k}"]`).value = url; const b = root.querySelector(`[data-img="${k}"]`); if (b) b.innerHTML = `<img src="${e(url)}">`; };
+    root.querySelectorAll('[data-img]').forEach((b) => b.onclick = async () => {
+      const f = await pickFile(); if (!f) return;
+      b.innerHTML = '<div class="sk" style="width:100%;height:100%"></div>';
+      try { const { url } = await api('/api/admin/upload', { method: 'POST', body: { image: await resizeImage(f, 1200, 0.85) } }); setImg(b.dataset.img, url); }
+      catch (err) { toast(err.message, 'error'); b.innerHTML = ic('image-plus'); }
+    });
+    // Barkod: skanerlash va nomini avtomatik topish
+    const bc = root.querySelector('[data-k="barcode"]');
+    const findName = async (code) => {
+      const hint = $('#bcHint', root); if (!code || code.length < 6) return;
+      hint.textContent = 'Qidirilmoqda…';
+      try {
+        const r = await api('/api/admin/lookup?code=' + encodeURIComponent(code));
+        if (r.type === 'product' && (!item || r.product.id !== item.id)) { hint.innerHTML = `⚠️ Bu barkod allaqachon bor: <b>${e(r.product.name_uz)}</b>`; return; }
+        const sg = r.suggestion; const nm = root.querySelector('[data-k="name_uz"]');
+        if (sg?.name) {
+          if (nm && !nm.value.trim()) nm.value = sg.name;
+          const im = root.querySelector('[data-k="image"]'); if (im && !im.value && sg.image) setImg('image', sg.image);
+          hint.innerHTML = `✓ Topildi: <b>${e(sg.name)}</b>`; hap('success');
+        } else hint.textContent = r.type === 'product' ? '' : 'Internet bazasida topilmadi — nomini yozing';
+      } catch { hint.textContent = ''; }
+    };
+    const bs = $('[data-bscan]', root);
+    if (bs) bs.onclick = async () => {
+      const keep = $('#sheetBody').innerHTML; const state = collect(true);
+      const code = await scannerSheet('Barkodni skanerlang');
+      formSheet(entity, item, fields, transform, { ...preset, ...state, barcode: code ? code.replace(/\D/g, '') : state.barcode });
+      if (code) setTimeout(() => findName(code.replace(/\D/g, '')), 450);
+      void keep;
+    };
+    if (bc) bc.onchange = () => findName(bc.value.replace(/\D/g, ''));
+    const here = $('[data-here]', root);
+    if (here) here.onclick = () => locate((lat, lng) => { root.querySelector('[data-k="coords"]').value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`; hap('success'); });
     const stAdd = $('#stAdd', root);
     const bindStories = () => {
       $$('[data-stimg]', root).forEach((b) => b.onclick = async () => {
@@ -1486,27 +1665,23 @@ function formSheet(entity, item, fields, transform) {
       $$('[data-strm]', root).forEach((b) => b.onclick = () => b.closest('.strow').remove());
     };
     if (stAdd) { stAdd.onclick = () => { $('#stList', root).insertAdjacentHTML('beforeend', storyRow({})); bindStories(); }; bindStories(); }
-    root.querySelectorAll('[data-icon]').forEach((b) => b.onclick = () => { root.querySelectorAll('[data-icon]').forEach((x) => x.classList.toggle('on', x === b)); b.closest('.field').querySelector('[data-k]').value = b.dataset.icon; });
-    root.querySelectorAll('[data-img]').forEach((b) => b.onclick = async () => {
-      const f = await pickFile(); if (!f) return;
-      b.innerHTML = '<div class="sk" style="width:100%;height:100%"></div>';
-      try {
-        const { url } = await api('/api/admin/upload', { method: 'POST', body: { image: await resizeImage(f, 1200, 0.85) } });
-        root.querySelector(`[data-k="${b.dataset.img}"]`).value = url; b.innerHTML = `<img src="${e(url)}">`;
-      } catch (err) { toast(err.message, 'error'); b.innerHTML = ic('image-plus'); }
-    });
-    $('#fSave', root).onclick = async () => {
-      let data = {};
+    const num = (x) => (x === '' ? null : Number(String(x).replace(/\s/g, '').replace(',', '.')));
+    function collect(loose = false) {
+      const data = {};
       for (const f of fields) {
         if (f.t === 'switch') { data[f.k] = root.querySelector(`[data-sw="${f.k}"]`).classList.contains('on'); continue; }
         if (f.t === 'stories') { data[f.k] = $$('.strow', root).map((r) => ({ image: $('[data-si]', r).value || null, title: $('[data-st]', r).value.trim(), text: $('[data-sx]', r).value.trim() })).filter((x) => x.title || x.image); continue; }
         if (f.t === 'products') { data[f.k] = $$('[data-pid]:checked', root).map((x) => Number(x.dataset.pid)); continue; }
-        let x = root.querySelector(`[data-k="${f.k}"]`).value.trim();
-        if (f.req && !x) return toast(`${f.label} — to'ldiring`, 'error');
-        if (f.t === 'number' || f.num) x = x === '' ? null : Number(x); else if (x === '') x = null;
+        let x = root.querySelector(`[data-k="${f.k}"]`)?.value.trim() ?? '';
+        if (!loose && f.req && !x) throw new Error(`${f.label} — to'ldiring`);
+        if (f.t === 'number' || f.num) x = num(x); else if (f.t === 'barcode') x = x.replace(/\D/g, '') || null; else if (x === '') x = null;
         data[f.k] = x;
       }
+      return data;
+    }
+    $('#fSave', root).onclick = async () => {
       try {
+        let data = collect();
         if (transform) data = transform(data);
         await api(`/api/admin/${entity}${item ? '/' + item.id : ''}`, { method: item ? 'PATCH' : 'POST', body: data });
         closeSheet(); toast(tr('saved'), 'success'); reloadAdmin();
