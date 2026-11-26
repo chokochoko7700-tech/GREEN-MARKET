@@ -184,7 +184,7 @@ function applyTheme() {
   const pref = S.me?.theme || store.get('theme', 'auto');
   const mode = pref === 'auto' ? (tg?.colorScheme || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')) : pref;
   document.documentElement.dataset.theme = mode;
-  const bg = mode === 'dark' ? '#0c0d0c' : '#f4f5f2';
+  const bg = mode === 'dark' ? '#0c0d0c' : '#ffffff';
   try { tg.setHeaderColor(bg); tg.setBackgroundColor(bg); tg.setBottomBarColor?.(bg); } catch {}
 }
 
