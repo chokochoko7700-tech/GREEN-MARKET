@@ -504,7 +504,9 @@ function addrSheet() {
 /* ---------------- ROUTER ---------------- */
 const TABS = ['home', 'catalog', 'stores', 'profile'];
 const stack = [];
-const route = () => (location.hash.slice(1) || (ADMIN_MODE ? 'admin/home' : 'home')).split('/');
+// Telegram ochilishda hash'ga "#tgWebAppData=..." qo'yadi — uni sahifa deb o'qimaymiz
+if (/tgWebApp/.test(location.hash)) { try { history.replaceState(null, '', location.pathname + location.search); } catch {} }
+const route = () => { const h = location.hash.slice(1); return (h && !/^tgWebApp|=/.test(h) ? h : (ADMIN_MODE ? 'admin/home' : 'home')).split('/'); };
 function go(h) { if (location.hash !== '#' + h) location.hash = h; else render(true); }
 window.addEventListener('hashchange', () => { closeSheet(); render(); });
 $$('#fnav [data-tab]').forEach((b) => b.addEventListener('click', () => {
