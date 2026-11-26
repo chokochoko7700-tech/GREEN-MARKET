@@ -439,7 +439,7 @@ function applyLook() {
 }
 function themePage(v) {
   const l = look(); const view = S.me?.theme || local.get('theme', 'light');
-  const promo = (S.catalog?.banners || []).find((b) => (b.style || 'card') === 'card');
+  const promo = (S.catalog?.banners || []).find((b) => ['card', 'story'].includes(b.style || 'card'));
   v.innerHTML = navbar(tr('theme')) + `
     <div class="tp-frame"><div class="tp-prev"><div class="tp-inner">
       <div class="home-decor">${decor()}</div>
@@ -580,7 +580,7 @@ function home(v) {
   if (needCatalog(v)) return;
   const { categories, products, banners } = S.catalog;
   const me = S.me || {};
-  const promos = banners.filter((b) => (b.style || 'card') === 'card');
+  const promos = banners.filter((b) => ['card', 'story'].includes(b.style || 'card'));
   const blocks = banners.filter((b) => b.style === 'block');
   const secs = categories.map((c) => ({ c, list: products.filter((p) => p.category_id === c.id) })).filter((s) => s.list.length);
   const deals = products.filter((p) => p.old_price > p.price && p.in_stock).sort((a, b) => (b.old_price - b.price) / b.old_price - (a.old_price - a.price) / a.old_price);
@@ -615,6 +615,7 @@ function home(v) {
   blocks.forEach((b) => startBlock(b));
 }
 function promoCard(b, i) {
+  if (b.style === 'story') return `<div class="promo sc press" data-story="${i}"><img src="${e(b.image || storiesOf(b)[0]?.image || '')}" alt="${e(b.title || '')}" loading="lazy"></div>`;
   if (b.color) {
     return `<div class="promo press" data-story="${i}" style="background:${e(b.color)}"><div class="cap"><small>${e(b.subtitle || '')}</small><b>${e(b.title || '')}</b></div>
       ${b.image ? `<img class="pimg lz" src="${e(b.image)}" alt="">` : ''}${storiesOf(b).length ? `<span class="pplay">${ic('mdi:play')}${storiesOf(b).map(() => '<i></i>').join('')}</span>` : ''}</div>`;
@@ -674,7 +675,10 @@ function openBanner(b) {
 }
 
 /* ---------- Istoriyalar (bannerga bosilganda) ---------- */
-const storiesOf = (b) => (Array.isArray(b?.stories) ? b.stories.filter((s) => s && (s.title || s.image)) : []);
+const storiesOf = (b) => {
+  const list = Array.isArray(b?.stories) ? b.stories.filter((s) => s && (s.title || s.image)) : [];
+  return !list.length && b?.style === 'story' && b.image ? [{ image: b.image, poster: true }] : list;
+};
 function openStories(groups, gi) {
   const DUR = 5000;
   const el = document.createElement('div'); el.className = 'story';
@@ -691,7 +695,7 @@ function openStories(groups, gi) {
     const b = groups[g]; const list = storiesOf(b); const st = list[s];
     el.innerHTML = `<div class="st-top"><div class="st-bars">${list.map((_, k) => `<i><b style="width:${k < s ? 100 : 0}%"></b></i>`).join('')}</div>
       <div class="st-head"><b>${e(b.story_title || b.title || '')}</b><button class="st-x">${ic('x')}</button></div></div>
-      <div class="st-body"><h1>${e(st.title || '')}</h1>${st.text ? `<p>${e(st.text)}</p>` : ''}${st.image ? `<img src="${e(st.image)}" alt="">` : ''}</div>
+      ${st.poster ? `<div class="st-body poster"><img src="${e(st.image)}" alt=""></div>` : `<div class="st-body"><h1>${e(st.title || '')}</h1>${st.text ? `<p>${e(st.text)}</p>` : ''}${st.image ? `<img src="${e(st.image)}" alt="">` : ''}</div>`}
       ${b.link_type !== 'none' && b.link_type ? `<div class="st-foot"><button class="btn" data-more>${tr('look')}</button></div>` : ''}
       <div class="st-tap l"></div><div class="st-tap r"></div>`;
     $('.st-x', el).onclick = close;
@@ -1700,7 +1704,7 @@ function admBanners(box) {
   box.innerHTML = listRows(A.banners, (b) => `<button class="arow" data-id="${b.id}" style="${b.active ? '' : 'opacity:.4'}"><span class="thumb" style="background:${e(b.color || 'var(--surface)')}">${img(b.image)}</span><span class="tx">${e(b.title || 'Banner #' + b.id)}<small>${b.style === 'block' ? 'Rangli blok' : `Promo karta · ${storiesOf(b).length} ta istoriya`}</small></span><span class="chev">${ic('chevron-right')}</span></button>`) + fab('addB', 'Qo\'shish');
   const linkOpts = [['none:', '— hech qayerga'], ...A.categories.filter((c) => c.active).map((c) => [`category:${c.id}`, '📂 ' + c.name_uz]), ...A.products.filter((p) => p.active).map((p) => [`product:${p.id}`, '🛒 ' + p.name_uz])];
   const form = (b) => formSheet('banners', b ? { ...b, link: `${b.link_type}:${b.link_id ?? ''}` } : null, [
-    { k: 'style', t: 'seg', label: 'Turi', opts: [['card', 'Promo karta'], ['block', 'Rangli blok']], def: 'card' },
+    { k: 'style', t: 'seg', label: 'Turi', opts: [['story', 'Story (poster)'], ['card', 'Promo karta'], ['block', 'Rangli blok']], def: 'card' },
     { k: 'title', label: 'Sarlavha', req: true }, { k: 'subtitle', label: 'Kichik matn' },
     { k: 'image', t: 'image', label: 'Rasm (rangli blokda — brend logotipi, shaffof PNG)', small: true },
     { k: 'color', t: 'color', label: 'Fon rangi', def: '#eaf6ec' },
@@ -1913,7 +1917,7 @@ setInterval(checkVersion, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
 
 /* ---------------- BOOT ---------------- */
-function hideSplash() { const s = $('#splash'); if (s) { s.classList.add('out'); setTimeout(() => s.remove(), 500); } }
+function hideSplash() { const s = $('#splash'); if (s) { hap('success'); setTimeout(() => hap('light'), 140); s.classList.add('out'); setTimeout(() => s.remove(), 500); } }
 async function boot() {
   if (/[?&]demo=1/.test(location.search)) await loadScript('/demo.js?v=' + window.APP_VERSION).catch(() => {});
   try {
