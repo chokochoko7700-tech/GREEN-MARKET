@@ -1324,39 +1324,81 @@ function admHome(box) {
   api('/api/admin/orders?status=new').then((l) => { const el = $('#newCnt'); if (el) el.innerHTML = l.length ? `<span class="nb">${l.length} yangi</span>` : 'Yangi yo\'q'; }).catch(() => {});
 }
 
-/* ---------- Skaner ---------- */
-let scanLib = null;
+/* ---------- Skaner (kamera + ZXing, iPhone'da ham shtrix-kod o'qiydi) ---------- */
+let zxLib = null;
 function scannerSheet(title = 'Skaner') {
   return new Promise((resolve) => {
-    let done = false, cam = null;
-    const finish = (code) => {
-      if (done) return; done = true;
-      try { cam?.stop().catch(() => {}); } catch {}
-      closeSheet(); resolve(code ? String(code).trim() : null);
-    };
+    let done = false, stream = null, timer = null, track = null;
+    const stop = () => { clearInterval(timer); try { stream?.getTracks().forEach((t) => t.stop()); } catch {} };
+    const finish = (code) => { if (done) return; done = true; stop(); closeSheet(); resolve(code ? String(code).trim() : null); };
     openSheet(`<div style="text-align:center"><h2 style="margin:4px 0 2px;font-size:22px;font-weight:800">${e(title)}</h2>
-      <p class="muted" style="margin:0 0 14px;font-size:14px">Shtrix-kod yoki QR kodni kameraga qarating</p></div>
-      <div class="scanbox"><div id="qrReader"></div><div class="scanline"></div><div class="scanmsg" id="scanMsg">Kamera ochilmoqda…</div></div>
+      <p class="muted" style="margin:0 0 14px;font-size:14px">Shtrix-kodni ramka ichiga, 15–20 sm masofada tuting</p></div>
+      <div class="scanbox"><video id="scanVid" playsinline muted autoplay></video><div class="scanframe"><i></i></div>
+        <div class="scanmsg" id="scanMsg">Kamera ochilmoqda…</div><button class="torch" id="torch" hidden>${ic('flashlight')}</button></div>
       <div class="search-line" style="padding:12px 0 0"><label class="search-pill">${ic('keyboard')}<input id="manCode" inputmode="numeric" placeholder="Kodni qo'lda kiriting" enterkeyhint="go"></label><button class="sq-btn" id="manGo">${ic('arrow-right')}</button></div>
-      ${tg?.showScanQrPopup ? `<button class="btn ghost" id="tgQr" style="margin-top:10px">${ic('qr-code')}Telegram QR skaneri</button>` : ''}
+      ${tg?.showScanQrPopup ? `<button class="btn ghost" id="tgQr" style="margin-top:10px">${ic('qr-code')}Mijoz QR — Telegram skaneri</button>` : ''}
       <button class="btn text" data-close>Orqaga</button>`, async (root) => {
       const man = () => { const c = $('#manCode', root).value.trim(); if (c) finish(c); };
       $('#manGo', root).onclick = man;
       $('#manCode', root).onkeydown = (ev) => { if (ev.key === 'Enter') man(); };
       const tq = $('#tgQr', root);
-      if (tq) tq.onclick = () => { try { cam?.stop().catch(() => {}); } catch {} tg.showScanQrPopup({ text: 'Mijoz QR-kartasini skanerlang' }, (txt) => { tg.closeScanQrPopup(); setTimeout(() => finish(txt), 50); return true; }); };
-      const obs = new MutationObserver(() => { if ($('#sheetWrap').hidden || !$('#qrReader')) { obs.disconnect(); if (!done) { done = true; try { cam?.stop().catch(() => {}); } catch {} resolve(null); } } });
-      obs.observe($('#sheetWrap'), { attributes: true });
+      if (tq) tq.onclick = () => { stop(); tg.showScanQrPopup({ text: 'Mijoz QR-kartasini skanerlang' }, (txt) => { tg.closeScanQrPopup(); setTimeout(() => finish(txt), 50); return true; }); };
+      const obs = new MutationObserver(() => { if (!$('#scanVid')) { obs.disconnect(); if (!done) { done = true; stop(); resolve(null); } } });
+      obs.observe($('#sheetBody'), { childList: true });
+      const msg = (h) => { const m = $('#scanMsg', root); if (m) m.innerHTML = h; };
       try {
-        if (!window.Html5Qrcode) { if (!scanLib) scanLib = loadScript('https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js'); await scanLib; }
-        if (done) return;
-        const F = window.Html5QrcodeSupportedFormats;
-        cam = new window.Html5Qrcode('qrReader', { formatsToSupport: [F.QR_CODE, F.EAN_13, F.EAN_8, F.UPC_A, F.UPC_E, F.CODE_128, F.CODE_39], verbose: false });
-        await cam.start({ facingMode: 'environment' }, { fps: 12, qrbox: (w, h) => ({ width: Math.min(w, 280), height: Math.min(h, 170) }), aspectRatio: 1.4 }, (txt) => { hap('success'); finish(txt); }, () => {});
-        const m = $('#scanMsg', root); if (m) m.remove();
+        stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } } });
+        if (done) return stop();
+        const vid = $('#scanVid', root); vid.srcObject = stream; await vid.play().catch(() => {});
+        track = stream.getVideoTracks()[0];
+        try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch {}
+        const caps = track.getCapabilities?.() || {};
+        if (caps.torch) { const tb = $('#torch', root); tb.hidden = false; let on = false; tb.onclick = () => { on = !on; track.applyConstraints({ advanced: [{ torch: on }] }).catch(() => {}); tb.classList.toggle('on', on); }; }
+        msg('');
+        // 1) Brauzerning o'z BarcodeDetector'i (Android Chrome) — eng tez
+        let native = null;
+        if ('BarcodeDetector' in window) { try { native = new window.BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'qr_code'] }); } catch {} }
+        // 2) Aks holda ZXing (iPhone)
+        let reader = null, hints = null, Z = null;
+        if (!native) {
+          if (!window.ZXing) { if (!zxLib) zxLib = loadScript('https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'); await zxLib; }
+          Z = window.ZXing;
+          hints = new Map();
+          hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, [Z.BarcodeFormat.EAN_13, Z.BarcodeFormat.EAN_8, Z.BarcodeFormat.UPC_A, Z.BarcodeFormat.UPC_E, Z.BarcodeFormat.CODE_128, Z.BarcodeFormat.CODE_39, Z.BarcodeFormat.QR_CODE]);
+          hints.set(Z.DecodeHintType.TRY_HARDER, true);
+          reader = new Z.MultiFormatReader(); reader.setHints(hints);
+        }
+        const cv = document.createElement('canvas'); const cx = cv.getContext('2d', { willReadFrequently: true });
+        let busy = false, last = '', same = 0, turn = 0;
+        timer = setInterval(async () => {
+          if (busy || done || !vid.videoWidth) return; busy = true;
+          try {
+            if (native) {
+              const r = await native.detect(vid);
+              if (r[0]?.rawValue) { hap('success'); return finish(r[0].rawValue); }
+            } else {
+              // Markaziy kesimni tekshiramiz; navbat bilan keng va tor ramka (har xil masofa uchun)
+              const W = vid.videoWidth, H = vid.videoHeight; turn = (turn + 1) % 3;
+              const fw = [0.85, 0.65, 0.95][turn], fh = [0.45, 0.35, 0.7][turn];
+              const sw = Math.round(W * fw), sh = Math.round(H * fh), sx = Math.round((W - sw) / 2), sy = Math.round((H - sh) / 2);
+              const scale = Math.min(1, 1100 / sw);
+              cv.width = Math.round(sw * scale); cv.height = Math.round(sh * scale);
+              cx.drawImage(vid, sx, sy, sw, sh, 0, 0, cv.width, cv.height);
+              const lum = new Z.HTMLCanvasElementLuminanceSource(cv);
+              let txt = null;
+              for (const Bin of [Z.HybridBinarizer, Z.GlobalHistogramBinarizer]) {
+                try { txt = reader.decode(new Z.BinaryBitmap(new Bin(lum)), hints).getText(); break; } catch {}
+              }
+              if (txt) {
+                // Shtrix-kodni ikki marta bir xil o'qisa — qabul qilamiz (xato o'qishdan himoya)
+                if (/^GM-/i.test(txt) || txt === last) { hap('success'); return finish(txt); }
+                last = txt; same = 1;
+              }
+            }
+          } catch {} finally { busy = false; }
+        }, 120);
       } catch (err) {
-        const m = $('#scanMsg', root);
-        if (m) m.innerHTML = `${ic('camera-off')}<br>Kamera ochilmadi. Kodni qo'lda kiriting${tg?.showScanQrPopup ? ' yoki Telegram QR skaneridan foydalaning' : ''}.`;
+        msg(`${ic('camera-off')}<br>Kameraga ruxsat berilmadi. Telegram sozlamalarida kameraga ruxsat bering yoki kodni qo'lda kiriting.`);
       }
     });
   });
@@ -1440,7 +1482,8 @@ async function admOrders(box) {
 /* ---------- Mahsulotlar ---------- */
 function admProducts(box) {
   const A = S.admin; const catName = (id) => A.categories.find((c) => c.id === id)?.name_uz || '—';
-  box.innerHTML = `<div class="search-line" style="padding-top:0"><label class="search-pill">${ic('search')}<input id="aq" placeholder="Nomi yoki barkod…"></label><button class="sq-btn" id="aScan">${ic('scan-line')}</button></div><div id="apl"></div>${fab('addP', 'Qo\'shish')}`;
+  box.innerHTML = `<div class="search-line" style="padding-top:0"><label class="search-pill">${ic('search')}<input id="aq" placeholder="Nomi yoki barkod…"></label><button class="sq-btn" id="aScan">${ic('scan-line')}</button></div>
+    <div class="pad" style="margin-bottom:12px"><button class="btn ghost sm" id="autoImg" style="width:100%">${ic('image-down')}Rasmlarni internetdan topish</button></div><div id="apl"></div>${fab('addP', 'Qo\'shish')}`;
   const draw = () => {
     const q = $('#aq').value.toLowerCase().trim();
     const list = A.products.filter((p) => p.active || q).filter((p) => !q || p.name_uz.toLowerCase().includes(q) || (p.barcode || '').includes(q));
@@ -1451,6 +1494,11 @@ function admProducts(box) {
   $('#aq').oninput = draw; draw();
   $('#addP').onclick = () => productForm(null);
   $('#aScan').onclick = () => scanFlow();
+  $('#autoImg').onclick = async (ev) => {
+    const btn = ev.currentTarget; btn.disabled = true; btn.innerHTML = `${ic('loader')}Qidirilmoqda… (1 daqiqagacha)`;
+    try { const r = await api('/api/admin/autoimages', { method: 'POST', body: {} }); toast(`${r.updated} ta rasm qo'yildi${r.missing.length ? ` · ${r.missing.length} tasi topilmadi` : ''}`, 'success'); reloadAdmin(); }
+    catch (err) { toast(err.message, 'error'); btn.disabled = false; }
+  };
 }
 function productForm(p, preset = {}) {
   const A = S.admin;

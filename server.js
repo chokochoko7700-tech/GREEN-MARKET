@@ -11,6 +11,7 @@ const bot = require('./src/bot');
 const adminBot = require('./src/adminbot');
 const orders = require('./src/orders');
 const { lookupBarcode } = require('./src/lookup');
+const { findImage } = require('./src/images');
 
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const MIME = {
@@ -123,6 +124,37 @@ async function birthdayBonus(user) {
   const bal = await db.rpc('add_coins', { uid: user.id, delta: coins });
   orders.logCoins(user.id, coins, 'birthday');
   return { ...user, coins: bal ?? user.coins + coins, bday_year: now.getUTCFullYear(), birthday_gift: coins };
+}
+
+// Rasmsiz yoki demo-rasmli mahsulotlarga haqiqiy rasm topib qo'yish
+let autoRunning = null;
+function autoImages(all = false) {
+  if (autoRunning) return autoRunning;
+  autoRunning = (async () => {
+    const list = await db.select('products', 'active=eq.true&select=id,name_uz,barcode,image');
+    const todo = list.filter((p) => all || !p.image || p.image.includes('api.iconify.design'));
+    let updated = 0; const missing = [];
+    for (let i = 0; i < todo.length; i += 4) {
+      await Promise.all(todo.slice(i, i + 4).map(async (p) => {
+        const r = await findImage(p).catch(() => null);
+        if (!r?.image) { missing.push(p.name_uz); return; }
+        const patch = { image: r.image };
+        if (!p.barcode && r.barcode) patch.barcode = r.barcode;
+        await db.update('products', `id=eq.${p.id}`, patch).then(() => { updated++; }).catch(() => missing.push(p.name_uz));
+      }));
+    }
+    // Kategoriya plitkalari: demo-ikonka o'rniga shu kategoriyadagi mahsulot rasmi
+    const cats = await db.select('categories', 'active=eq.true&select=id,image');
+    const prods = await db.select('products', 'active=eq.true&select=category_id,image,popular,sort&order=popular.desc,sort.asc');
+    for (const c of cats) {
+      if (c.image && !c.image.includes('api.iconify.design')) continue;
+      const p = prods.find((x) => x.category_id === c.id && x.image && !x.image.includes('api.iconify.design'));
+      if (p) await db.update('categories', `id=eq.${c.id}`, { image: p.image }).catch(() => {});
+    }
+    console.log(`Rasmlar: ${updated}/${todo.length} yangilandi`);
+    return { updated, total: todo.length, missing };
+  })().finally(() => { setTimeout(() => { autoRunning = null; }, 1000); });
+  return autoRunning;
 }
 
 async function loadSettings() {
@@ -302,6 +334,11 @@ async function api(req, res, pathname, query) {
       return json(res, 200, { earned, spent: spend, customer: { id: nu.id, name: nu.name || nu.tg_name, phone: nu.phone, coins: nu.coins, spent: nu.spent, level: orders.levelOf(cc, nu.spent) } });
     }
 
+    if (entity === 'autoimages' && method === 'POST') {
+      const b = await readBody(req);
+      return json(res, 200, await autoImages(Boolean(b.all)));
+    }
+
     if (entity === 'upload' && method === 'POST') {
       const b = await readBody(req);
       return json(res, 200, { url: await saveImage(b.image, 'catalog') });
@@ -385,7 +422,7 @@ server.listen(cfg.PORT, () => {
   adminBot.setup().catch((e) => console.error('Admin bot setup xato:', e));
   if (db.enabled) {
     db.select('products', 'select=id&limit=1')
-      .then(() => console.log('Baza: ulandi ✅'))
+      .then(() => { console.log('Baza: ulandi ✅'); setTimeout(() => autoImages().catch((e) => console.error('Rasmlar:', e.message)), 3000); })
       .catch((e) => console.error('Baza: XATO ❌', e.message));
   }
 });
