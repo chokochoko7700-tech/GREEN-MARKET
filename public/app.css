@@ -667,3 +667,31 @@ img[src*="openfoodfacts"] { object-fit: contain !important; padding: 8%; backgro
 .promo[style*="#ffffff"] .cap b { margin-top: auto; margin-bottom: 30px; font-size: 25px; line-height: 1; overflow-wrap: anywhere; color: #111; letter-spacing: -.03em; }
 .promo[style*="#ffffff"] .pimg { right: 4px; bottom: 4px; top: 6px; height: auto; width: 54%; object-fit: contain; object-position: right bottom; filter: none; }
 .promo[style*="#ffffff"] .pplay { right: 10px; bottom: 10px; }
+
+/* Story-poster: butun ekran, oq fon, qora miltillashsiz */
+.story { background: #fff !important; }
+.st-body.poster { position: absolute; inset: 0; padding: 0; animation: none; background: #fff; z-index: 1; }
+.st-body.poster img { width: 100%; height: 100%; max-height: none; object-fit: cover; object-position: center 40%; margin: 0; filter: none; background: #fff !important; animation: stFade .22s ease both; }
+.story .st-top { background: linear-gradient(#fff 55%, rgba(255,255,255,0)); padding-bottom: 6px; }
+.story .st-foot { margin-top: auto; }
+@keyframes stFade { from { opacity: .4; } to { opacity: 1; } }
+
+/* Katalog plitkalari — Magnit kabi: katta 3D rasm pastki o'ng burchakdan chiqib turadi */
+.ctiles { gap: 9px; }
+.ctile { height: 112px; border-radius: 18px; padding: 12px 13px; }
+.ctile b { font-size: 15px; font-weight: 700; letter-spacing: -.01em; max-width: 86%; }
+.ctile .art { position: absolute; right: -6px; bottom: -10px; width: 74%; height: 80%; display: block; pointer-events: none; }
+.ctile .art img { position: absolute; bottom: 0; height: 100%; width: auto; max-width: none; object-fit: contain; padding: 0 !important; background: none !important; filter: drop-shadow(0 8px 10px rgba(0,0,0,.18)); }
+.ctile .art.n1 img { right: 0; height: 96%; }
+.ctile .art.n2 img:first-child { right: 34%; height: 78%; bottom: -2px; z-index: 1; }
+.ctile .art.n2 img:last-child { right: -4%; height: 96%; z-index: 2; }
+.ctile.full .art { width: 62%; height: 118%; bottom: -16px; }
+.ctile:active .art img { transform: scale(1.04); }
+.ctile .art img { transition: transform .35s var(--ease); }
+.thumb .art { position: relative; display: block; width: 100%; height: 100%; }
+.thumb .art img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; }
+.thumb .art.n2 img:first-child { display: none; }
+[data-fx="on"] .home-decor .decor, [data-fx="on"] .lcard .decor { animation: drift 16s ease-in-out infinite alternate; transform-origin: 70% 30%; }
+@keyframes drift { 0% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-14px,8px,0) scale(1.06) rotate(-1.5deg); } 100% { transform: translate3d(10px,-6px,0) scale(1.03) rotate(1deg); } }
+@media (prefers-reduced-motion: reduce) { [data-fx="on"] .decor { animation: none !important; } }
+.ctile { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-start; }

@@ -12,6 +12,7 @@ const fmt = (n) => Math.round(Number(n || 0)).toString().replace(/\B(?=(\d{3})+(
 const round100 = (x) => Math.round(x / 100) * 100;
 const round3 = (x) => Math.round(x * 1000) / 1000;
 const kgTxt = (x) => String(round3(x)).replace('.', ',');
+const hapSel = () => { try { tg.HapticFeedback.selectionChanged(); } catch {} };
 const hap = (t = 'light') => { try { ['success', 'error', 'warning'].includes(t) ? tg.HapticFeedback.notificationOccurred(t) : tg.HapticFeedback.impactOccurred(t); } catch {} };
 const local = {
   get(k, d) { try { const v = localStorage.getItem('gm_' + k); return v ? JSON.parse(v) : d; } catch { return d; } },
@@ -397,7 +398,7 @@ Object.assign(L.uz, {
   findT: 'Mahsulotni toping', findP: 'Nomi yoki brendini yozing — narxlar sizga eng yaqin do\'kon bo\'yicha ko\'rsatiladi.', toProduct: 'Mahsulotga qaytish',
   lookPrev: 'Bosh sahifa va profil shunday ko\'rinadi', bgT: 'Fon', toneT: 'Rang', viewT: 'Ko\'rinish', resetLook: 'Standart ko\'rinishga qaytarish',
   bg_plain: 'Oddiy', bg_wave: 'To\'lqin', bg_silk: 'Ipak', bg_ribbon: 'Lenta', bg_glow: 'Nur', bg_rings: 'Halqalar', bg_pattern: 'Naqsh',
-  tn_graphite: 'Grafit', tn_gold: 'Oltin', tn_bronze: 'Bronza', vw_auto: 'Tizim bo\'yicha', vw_light: 'Yorug\'', vw_dark: 'Qorong\'i',
+  fxT: 'Effektlar', fxRow: 'Jonli fon', fxSub: 'Fon naqshi sekin harakatlanadi', tn_graphite: 'Grafit', tn_gold: 'Oltin', tn_bronze: 'Bronza', vw_auto: 'Tizim bo\'yicha', vw_light: 'Yorug\'', vw_dark: 'Qorong\'i',
 });
 Object.assign(L.ru, {
   scanTitle: 'Отсканируйте товар', scanHint: 'Наведите камеру на штрих-код товара', scanNo: 'Товара с таким штрих-кодом нет в каталоге. Попробуйте другой.',
@@ -405,11 +406,11 @@ Object.assign(L.ru, {
   findT: 'Найдите товар', findP: 'Введите название или бренд — цены показаны по ближайшему магазину.', toProduct: 'Вернуться к товару',
   lookPrev: 'Так будут выглядеть главная и профиль', bgT: 'Фон', toneT: 'Цвет', viewT: 'Оформление', resetLook: 'Вернуть стандартный вид',
   bg_plain: 'Обычный', bg_wave: 'Волна', bg_silk: 'Шёлк', bg_ribbon: 'Лента', bg_glow: 'Свет', bg_rings: 'Кольца', bg_pattern: 'Узор',
-  tn_graphite: 'Графит', tn_gold: 'Золото', tn_bronze: 'Бронза', vw_auto: 'Как в системе', vw_light: 'Светлое', vw_dark: 'Тёмное',
+  fxT: 'Эффекты', fxRow: 'Живой фон', fxSub: 'Узор фона медленно движется', tn_graphite: 'Графит', tn_gold: 'Золото', tn_bronze: 'Бронза', vw_auto: 'Как в системе', vw_light: 'Светлое', vw_dark: 'Тёмное',
 });
 
 /* ---------- Mavzu: fon va rang ---------- */
-const LOOK_DEF = { bg: 'wave', tone: 'graphite' };
+const LOOK_DEF = { bg: 'wave', tone: 'graphite', fx: true };
 const BGS = ['plain', 'wave', 'silk', 'ribbon', 'glow', 'rings', 'pattern'];
 const TONES = { graphite: null, gold: '#d4a64a', bronze: '#c0703c' };
 const look = () => ({ ...LOOK_DEF, ...local.get('look', {}) });
@@ -434,7 +435,7 @@ function decor(kind = look().bg) {
 }
 function applyLook() {
   const l = look(); const root = document.documentElement;
-  root.dataset.tone = l.tone;
+  root.dataset.tone = l.tone; root.dataset.fx = l.fx ? 'on' : 'off';
   if (TONES[l.tone]) root.style.setProperty('--tone', TONES[l.tone]); else root.style.removeProperty('--tone');
 }
 function themePage(v) {
@@ -453,7 +454,9 @@ function themePage(v) {
     <div class="sw-row">${BGS.map((k) => `<button class="sw press ${l.bg === k ? 'on' : ''}" data-bg="${k}"><span class="sw-box">${decor(k)}${l.bg === k ? `<i>${ic('check')}</i>` : ''}</span><small>${tr('bg_' + k)}</small></button>`).join('')}</div>
     <div class="label">${tr('toneT')}</div>
     <div class="tn-row">${Object.keys(TONES).map((k) => `<button class="tn press ${l.tone === k ? 'on' : ''}" data-tone="${k}"><span class="tn-dot tn-${k}">${l.tone === k ? ic('check') : ''}</span><small>${tr('tn_' + k)}</small></button>`).join('')}</div>
-    ${l.bg !== LOOK_DEF.bg || l.tone !== LOOK_DEF.tone ? `<button class="reset-look press" id="rstLook">${ic('rotate-ccw')}${tr('resetLook')}</button>` : ''}
+    ${l.bg !== LOOK_DEF.bg || l.tone !== LOOK_DEF.tone || l.fx !== LOOK_DEF.fx ? `<button class="reset-look press" id="rstLook">${ic('rotate-ccw')}${tr('resetLook')}</button>` : ''}
+    <div class="label">${tr('fxT')}</div>
+    <div class="rows"><button class="row" id="fxBtn">${ic('sparkles')}<span class="tx">${tr('fxRow')}<small>${tr('fxSub')}</small></span><span class="switch ${l.fx ? "on" : ""}"></span></button></div>
     <div class="label">${tr('viewT')}</div>
     <div class="rows"><button class="row" id="vwBtn">${ic(view === 'dark' ? 'moon' : view === 'light' ? 'sun' : 'smartphone')}<span class="tx">${tr('vw_' + view)}</span><span class="chev">${ic('chevron-right')}</span></button></div>
     <div style="height:110px"></div>`;
@@ -461,6 +464,7 @@ function themePage(v) {
   const set = (patch) => { hap('light'); local.set('look', { ...look(), ...patch }); applyLook(); const y = scrollY; themePage(v); scrollTo(0, y); };
   v.querySelectorAll('[data-bg]').forEach((b) => b.onclick = () => set({ bg: b.dataset.bg }));
   v.querySelectorAll('[data-tone]').forEach((b) => b.onclick = () => set({ tone: b.dataset.tone }));
+  $('#fxBtn').onclick = () => set({ fx: !look().fx });
   const r = $('#rstLook'); if (r) r.onclick = () => set({ ...LOOK_DEF });
   $('#vwBtn').onclick = () => choiceSheet(tr('viewT'), ['auto', 'light', 'dark'].map((x) => [x, tr('vw_' + x)]), view, (val) => {
     local.set('theme', val); if (S.me) S.me.theme = val; applyTheme(); savePref({ theme: val });
@@ -524,6 +528,7 @@ function render(silent = false) {
     if (isTab) { stack.length = 0; stack.push(h); }
     else if (idx >= 0) { anim = 'anim-pop'; stack.length = idx + 1; }
     else { anim = 'anim-push'; stack.push(h); }
+    if (S.booted) hap('soft');
   }
   const nav = $('#fnav');
   nav.hidden = ADMIN_MODE;
@@ -681,6 +686,7 @@ const storiesOf = (b) => {
 };
 function openStories(groups, gi) {
   const DUR = 5000;
+  groups.forEach((b) => storiesOf(b).forEach((x) => { if (x.image) { const im = new Image(); im.decoding = 'async'; im.src = x.image; } }));
   const el = document.createElement('div'); el.className = 'story';
   document.body.appendChild(el);
   let g = gi, s = 0, t0 = 0, elapsed = 0, paused = false, raf = 0;
@@ -737,17 +743,33 @@ function catalog(v) {
     let x = groups.find((y) => y.g === g); if (!x) groups.push(x = { g, list: [] });
     x.list.push(c);
   }
-  // Magnit kabi mozaika: juft qatorlar 7/5, toq qatorlar 6/6, yolg'iz plitka butun qator
-  const span = (i, n) => {
-    if (n % 2 && i === n - 1) return 12;
-    const row = Math.floor(i / 2);
-    return row % 2 ? (i % 2 ? 5 : 7) : 6;
+  // Magnit kabi mozaika: 1/3+2/3, 1/2+1/2, 2/3+1/3 ... ; 3 ta qolsa 1/3 x3, 1 ta qolsa butun qator
+  const spans = (n) => {
+    const out = []; const pat = [[4, 8], [6, 6], [8, 4], [6, 6]]; let r = 0, left = n;
+    while (left > 0) {
+      if (left === 1) { out.push(12); left = 0; }
+      else if (left === 3) { out.push(4, 4, 4); left = 0; }
+      else { out.push(...pat[r++ % pat.length]); left -= 2; }
+    }
+    return out;
   };
   v.innerHTML = `<div class="top-space"></div>
     <div class="search-line"><button class="search-pill press" data-go="search">${ic('search')}${tr('search')}<span style="margin-left:auto;font-size:20px;color:var(--text)">${ic('scan-line')}</span></button></div>
-    ${groups.map(({ g, list }) => `<div class="grp"><h2>${e(g)}</h2><div class="ctiles">${list.map((c, i) => `
-      <button class="ctile press" data-go="cat/${c.id}" style="grid-column:span ${span(i, list.length)};animation-delay:${i * 40}ms">
-        <b>${e(cname(c))}</b>${c.image ? `<img class="lz ${String(c.image).includes('iconify.design') ? 'emo' : ''}" src="${e(c.image)}" alt="">` : `<span class="ico"><iconify-icon icon="${e(c.icon || 'lucide:package')}"></iconify-icon></span>`}</button>`).join('')}</div></div>`).join('')}`;
+    ${groups.map(({ g, list }) => { const sp = spans(list.length); return `<div class="grp"><h2>${e(g)}</h2><div class="ctiles">${list.map((c, i) => `
+      <button class="ctile press ${sp[i] === 12 ? 'full' : ''}" data-go="cat/${c.id}" style="grid-column:span ${sp[i]};animation-delay:${i * 40}ms">
+        <b>${e(cname(c))}</b>${catArt(c)}</button>`).join('')}</div></div>`; }).join('')}`;
+}
+// Kategoriya rasmi: "fe:Nom1|Nom2" — Microsoft Fluent Emoji 3D (bepul, MIT), bo'lmasa oddiy rasm
+const fe3d = (n) => `https://cdn.jsdelivr.net/gh/microsoft/fluentui-emoji@main/assets/${encodeURIComponent(n)}/3D/${n.toLowerCase().replace(/[^a-z0-9]+/g, '_')}_3d.png`;
+const feFlat = (n) => `https://api.iconify.design/fluent-emoji/${n.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.svg`;
+function catArt(c) {
+  const im = String(c.image || '');
+  if (im.startsWith('fe:')) {
+    const names = im.slice(3).split('|').filter(Boolean).slice(0, 2);
+    return `<span class="art n${names.length}">${names.map((n) => `<img src="${fe3d(n)}" alt="" onerror="this.onerror=null;this.src='${feFlat(n)}'">`).join('')}</span>`;
+  }
+  if (im) return `<img class="lz ${im.includes('iconify.design') ? 'emo' : ''}" src="${e(im)}" alt="">`;
+  return `<span class="ico"><iconify-icon icon="${e(c.icon || 'lucide:package')}"></iconify-icon></span>`;
 }
 
 // Kategoriya ichi: tepada bo'lim kategoriyalari, ostida kichik bo'limlar (scrollspy), har biri o'z sarlavhasi bilan
@@ -780,6 +802,7 @@ function category(v, id) {
   });
   let lock = false;
   const setActive = (i) => {
+    hapSel();
     $$('#tabs2 button').forEach((x, k) => x.classList.toggle('on', k === i));
     const btn = $$('#tabs2 button')[i];
     if (btn) $('#tabs2').scrollTo({ left: btn.offsetLeft - 16, behavior: 'smooth' });
@@ -1685,7 +1708,7 @@ function productForm(p, preset = {}) {
 /* ---------- Kategoriyalar, bannerlar, do'konlar, savollar, retseptlar ---------- */
 function admCategories(box) {
   box.innerHTML = listRows(S.admin.categories.filter((c) => c.active), (c) => `<button class="arow" data-id="${c.id}">
-    <span class="thumb">${c.image ? img(c.image) : `<iconify-icon icon="${e(iconOf(c.icon))}"></iconify-icon>`}</span><span class="tx">${e(c.name_uz)}<small>${e(c.grp || '—')}</small></span><span class="chev">${ic('chevron-right')}</span></button>`) + fab('addC', 'Qo\'shish');
+    <span class="thumb">${c.image ? catArt(c) : `<iconify-icon icon="${e(iconOf(c.icon))}"></iconify-icon>`}</span><span class="tx">${e(c.name_uz)}<small>${e(c.grp || '—')}</small></span><span class="chev">${ic('chevron-right')}</span></button>`) + fab('addC', 'Qo\'shish');
   const groups = [...new Set(S.admin.categories.map((c) => c.grp).filter(Boolean))];
   const form = (c) => formSheet('categories', c, [
     { k: 'image', t: 'image', label: 'Rasm', small: true },
@@ -1917,7 +1940,7 @@ setInterval(checkVersion, 30000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) checkVersion(); });
 
 /* ---------------- BOOT ---------------- */
-function hideSplash() { const s = $('#splash'); if (s) { hap('success'); setTimeout(() => hap('light'), 140); s.classList.add('out'); setTimeout(() => s.remove(), 500); } }
+function hideSplash() { setTimeout(() => { S.booted = true; }, 300); const s = $('#splash'); if (s) { hap('success'); setTimeout(() => hap('light'), 140); s.classList.add('out'); setTimeout(() => s.remove(), 500); } }
 async function boot() {
   if (/[?&]demo=1/.test(location.search)) await loadScript('/demo.js?v=' + window.APP_VERSION).catch(() => {});
   try {
