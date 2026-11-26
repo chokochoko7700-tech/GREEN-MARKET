@@ -422,7 +422,7 @@ server.listen(cfg.PORT, () => {
   adminBot.setup().catch((e) => console.error('Admin bot setup xato:', e));
   if (db.enabled) {
     db.select('products', 'select=id&limit=1')
-      .then(() => { console.log('Baza: ulandi ✅'); setTimeout(() => autoImages().catch((e) => console.error('Rasmlar:', e.message)), 3000); })
+      .then(() => { console.log('Baza: ulandi ✅'); require('./src/probe')().catch(()=>{}); setTimeout(() => autoImages().catch((e) => console.error('Rasmlar:', e.message)), 3000); })
       .catch((e) => console.error('Baza: XATO ❌', e.message));
   }
 });
