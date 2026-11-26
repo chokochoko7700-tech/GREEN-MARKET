@@ -188,3 +188,4 @@ create table if not exists recipes (
 );
 alter table recipes enable row level security;
 grant select, insert, update, delete on recipes to service_role;
+alter table banners alter column image drop not null;
