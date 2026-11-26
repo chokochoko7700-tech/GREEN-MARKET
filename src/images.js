@@ -3,7 +3,7 @@
 //  - meva-sabzavot, go'sht kabi brendsiz mahsulotlar — Vikipediya asosiy rasmi
 const { lookupBarcode } = require('./lookup');
 
-async function getJson(url, ms = 7000) {
+async function getJson(url, ms = 20000) {
   const ctl = new AbortController();
   const t = setTimeout(() => ctl.abort(), ms);
   try {
@@ -18,8 +18,8 @@ const WIKI = [
   [/kartoshka(?!.*chips)/i, 'Potato'], [/sabzi/i, 'Carrot'], [/bulg.or qalampir/i, 'Bell_pepper'], [/achchiq qalampir/i, 'Chili_pepper'],
   [/avokado/i, 'Avocado'], [/shampinon|qo.ziqorin/i, 'Agaricus_bisporus'], [/olma yashil/i, 'Granny_Smith'], [/olma/i, 'Apple'],
   [/banan/i, 'Banana'], [/limon/i, 'Lemon'], [/mandarin/i, 'Mandarin_orange'], [/uzum/i, 'Grape'], [/qulupnay/i, 'Strawberry'],
-  [/mol go.shti/i, 'Beef'], [/tovuq/i, 'Chicken_as_food'], [/losos/i, 'Salmon_as_food'], [/krevetka/i, 'Shrimp_and_prawn_as_food'],
-  [/patir|obi non/i, 'Non_(bread)'], [/baton|buxanka|non\b/i, 'Bread'], [/tuxum/i, 'Egg_as_food'], [/guruch/i, 'Rice'],
+  [/mol go.shti/i, 'Steak'], [/tovuq/i, 'Chicken_as_food'], [/losos/i, 'Salmon_as_food'], [/krevetka/i, 'Prawn'],
+  [/patir|obi non/i, 'Non_(food)'], [/baton|buxanka|non\b/i, 'Bread'], [/tuxum/i, 'Egg_as_food'], [/guruch/i, 'Rice'],
   [/kruassan/i, 'Croissant'], [/ponchik/i, 'Doughnut'], [/asal/i, 'Honey'], [/tvorog/i, 'Quark_(dairy_product)'],
 ];
 
@@ -36,24 +36,45 @@ async function fromWikipedia(name) {
 
 const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9а-яё]+/gi, ' ').trim();
 
+// Brend nomi -> Open Food Facts brend tegi
+const BRANDS = [
+  ['coca-cola zero', 'coca-cola'], ['coca-cola', 'coca-cola'], ['fanta', 'fanta'], ['sprite', 'sprite'], ['pepsi', 'pepsi'], ['7up', '7up'],
+  ['red bull', 'red-bull'], ['nestle pure life', 'nestle-pure-life'], ['borjomi', 'borjomi'], ['rich', 'rich'], ['lipton', 'lipton'],
+  ['ahmad', 'ahmad-tea'], ['nescafe', 'nescafe'], ['jacobs', 'jacobs'], ['snickers', 'snickers'], ['twix', 'twix'], ['mars', 'mars'],
+  ['bounty', 'bounty'], ['kitkat', 'kitkat'], ['milka', 'milka'], ['alpen gold', 'alpen-gold'], ['nutella', 'nutella'], ['chupa chups', 'chupa-chups'],
+  ["lay's", 'lay-s'], ['pringles', 'pringles'], ['cheetos', 'cheetos'], ['orbit', 'orbit'], ['lactel', 'lactel'], ['president', 'president'],
+  ['danone', 'danone'], ['activia', 'activia'], ['hochland', 'hochland'], ['barilla', 'barilla'], ['heinz', 'heinz'], ["hellmann's", 'hellmann-s'],
+  ['magnum', 'magnum'], ['cornetto', 'cornetto'],
+];
+// "1,5 L" -> ["1,5 l","1.5 l","1500 ml"]; "80 g" -> ["80 g","80g"]
+function qtyKeys(name) {
+  const m = /(\d+(?:[.,]\d+)?)\s*(l|ml|g|kg)\b/i.exec(name);
+  if (!m) return [];
+  const n = parseFloat(m[1].replace(',', '.')), u = m[2].toLowerCase();
+  const keys = [`${m[1].replace(',', '.')} ${u}`, `${m[1].replace('.', ',')} ${u}`, `${m[1].replace(',', '.')}${u}`];
+  if (u === 'l') keys.push(`${Math.round(n * 1000)} ml`, `${Math.round(n * 1000)}ml`);
+  if (u === 'kg') keys.push(`${Math.round(n * 1000)} g`);
+  return keys.map((k) => k.toLowerCase());
+}
 async function fromOffSearch(name) {
-  const q = name.replace(/\b\d+[.,]?\d*\s*(l|ml|g|gr|kg|dona|paket|banka)\b/gi, '').replace(/[,]/g, ' ').trim();
-  const j = await getJson(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=20&fields=code,product_name,brands,quantity,image_front_url,unique_scans_n`);
+  const low = name.toLowerCase();
+  const hit = BRANDS.find(([k]) => low.startsWith(k) || low.includes(k));
+  if (!hit) return null;
+  const j = await getJson(`https://world.openfoodfacts.org/api/v2/search?brands_tags=${hit[1]}&fields=code,product_name,brands,quantity,image_front_url,unique_scans_n&sort_by=unique_scans_n&page_size=60`);
   const list = (j?.products || []).filter((p) => p.image_front_url && p.product_name);
   if (!list.length) return null;
-  const words = norm(q).split(' ').filter((w) => w.length > 2);
-  const brand = words[0];
+  const words = norm(name.replace(hit[0], '')).split(' ').filter((w) => w.length > 2 && !/^\d/.test(w) && !['dona', 'paket', 'banka', 'klassik'].includes(w));
+  const qk = qtyKeys(name);
   const score = (p) => {
-    const t = norm(`${p.brands} ${p.product_name}`);
-    let s = words.reduce((a, w) => a + (t.includes(w) ? 2 : 0), 0);
-    if (brand && norm(p.brands).includes(brand)) s += 3;
+    const t = norm(`${p.product_name}`); const q = String(p.quantity || '').toLowerCase().replace(/\s+/g, ' ');
+    let s = words.reduce((a, w) => a + (t.includes(w) ? 3 : 0), 0);
+    if (qk.some((k) => q.includes(k) || t.includes(k))) s += 5;
+    if (hit[0] === 'coca-cola' && /zero|light|vanil|cherry|lime/i.test(p.product_name)) s -= 6;
     s += Math.min(3, Math.log10((p.unique_scans_n || 0) + 1));
     return s;
   };
   list.sort((a, b) => score(b) - score(a));
-  const best = list[0];
-  if (brand && !norm(`${best.brands} ${best.product_name}`).includes(brand)) return null;
-  return { image: best.image_front_url, barcode: best.code, source: 'openfoodfacts' };
+  return { image: list[0].image_front_url, barcode: list[0].code, source: 'openfoodfacts' };
 }
 
 async function findImage(p) {
@@ -61,7 +82,7 @@ async function findImage(p) {
     const r = await lookupBarcode(p.barcode);
     if (r?.image) return { image: r.image };
   }
-  return (await fromWikipedia(p.name_uz)) || (await fromOffSearch(p.name_uz)) || null;
+  return (await fromOffSearch(p.name_uz)) || (await fromWikipedia(p.name_uz)) || null;
 }
 
 module.exports = { findImage };
