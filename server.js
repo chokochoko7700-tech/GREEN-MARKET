@@ -287,4 +287,9 @@ const server = http.createServer(async (req, res) => {
 server.listen(cfg.PORT, () => {
   console.log(`Green Market ${cfg.VERSION} — port ${cfg.PORT}`);
   bot.setup().catch((e) => console.error('Bot setup xato:', e));
+  if (db.enabled) {
+    db.select('products', 'select=id&limit=1')
+      .then(() => console.log('Baza: ulandi ✅'))
+      .catch((e) => console.error('Baza: XATO ❌', e.message));
+  }
 });
