@@ -177,3 +177,14 @@ grant select, insert, update, delete on all tables in schema public to service_r
 grant usage, select on all sequences in schema public to service_role;
 grant execute on function public.add_coins(bigint, integer) to service_role;
 alter table categories add column if not exists image text;
+
+-- v4: istoriyalar, kichik bo'limlar, retseptlar
+alter table products add column if not exists sub text;
+alter table banners add column if not exists stories jsonb not null default '[]';
+alter table banners add column if not exists story_title text;
+create table if not exists recipes (
+  id serial primary key, title_uz text not null, title_ru text, image text, body_uz text, body_ru text,
+  product_ids integer[] not null default '{}', sort integer not null default 0, active boolean not null default true
+);
+alter table recipes enable row level security;
+grant select, insert, update, delete on recipes to service_role;

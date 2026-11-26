@@ -101,9 +101,10 @@ function requireAdmin(user) {
 const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== undefined).map((k) => [k, obj[k]]));
 
 const ADMIN_TABLES = {
-  products: ['category_id', 'name_uz', 'name_ru', 'desc_uz', 'desc_ru', 'image', 'unit', 'price', 'old_price', 'piece_kg', 'min_kg', 'coin_price', 'popular', 'in_stock', 'sort', 'active'],
+  products: ['category_id', 'name_uz', 'name_ru', 'desc_uz', 'desc_ru', 'image', 'unit', 'price', 'old_price', 'piece_kg', 'min_kg', 'coin_price', 'popular', 'sub', 'in_stock', 'sort', 'active'],
   categories: ['name_uz', 'name_ru', 'grp', 'icon', 'image', 'sort', 'active'],
-  banners: ['image', 'title', 'subtitle', 'link_type', 'link_id', 'style', 'color', 'sort', 'active'],
+  banners: ['image', 'title', 'subtitle', 'link_type', 'link_id', 'style', 'color', 'story_title', 'stories', 'sort', 'active'],
+  recipes: ['title_uz', 'title_ru', 'image', 'body_uz', 'body_ru', 'product_ids', 'sort', 'active'],
   stores: ['name', 'address', 'lat', 'lng', 'hours', 'phone', 'sort', 'active'],
   faq: ['q_uz', 'a_uz', 'q_ru', 'a_ru', 'sort'],
 };
@@ -144,15 +145,16 @@ async function api(req, res, pathname, query) {
   if (pathname === '/api/version') return json(res, 200, { version: cfg.VERSION });
 
   if (pathname === '/api/catalog' && method === 'GET') {
-    const [categories, products, banners, faq, settings, stores] = await Promise.all([
+    const [categories, products, banners, faq, settings, stores, recipes] = await Promise.all([
       db.select('categories', 'active=eq.true&order=sort.asc,id.asc'),
       db.select('products', 'active=eq.true&order=sort.asc,id.asc'),
       db.select('banners', 'active=eq.true&order=sort.asc,id.asc'),
       db.select('faq', 'order=sort.asc,id.asc'),
       loadSettings(),
       db.select('stores', 'active=eq.true&order=sort.asc,id.asc'),
-    ]).then((r) => r);
-    return json(res, 200, { categories, products, banners, faq, settings, stores, version: cfg.VERSION });
+      db.select('recipes', 'active=eq.true&order=sort.asc,id.asc').catch(() => []),
+    ]);
+    return json(res, 200, { categories, products, banners, faq, settings, stores, recipes, version: cfg.VERSION });
   }
 
   const user = await auth(req);
@@ -221,15 +223,16 @@ async function api(req, res, pathname, query) {
     const [, , entity, id] = parts;
 
     if (entity === 'all' && method === 'GET') {
-      const [categories, products, banners, faq, settings, stores] = await Promise.all([
+      const [categories, products, banners, faq, settings, stores, recipes] = await Promise.all([
         db.select('categories', 'order=sort.asc,id.asc'),
         db.select('products', 'order=sort.asc,id.asc'),
         db.select('banners', 'order=sort.asc,id.asc'),
         db.select('faq', 'order=sort.asc,id.asc'),
         loadSettings(),
         db.select('stores', 'order=sort.asc,id.asc'),
+        db.select('recipes', 'order=sort.asc,id.asc').catch(() => []),
       ]);
-      return json(res, 200, { categories, products, banners, faq, settings, stores });
+      return json(res, 200, { categories, products, banners, faq, settings, stores, recipes });
     }
 
     if (entity === 'orders' && method === 'GET') {

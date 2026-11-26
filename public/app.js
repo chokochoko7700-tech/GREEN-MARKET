@@ -32,6 +32,11 @@ const cloud = { // Telegram CloudStorage — savat boshqa qurilmada ham saqlanad
 /* ---------------- I18N ---------------- */
 const L = {
   uz: {
+    sc_fav: 'Sevimlilar', sc_list: 'Ro\'yxat', sc_deals: 'Chegirmalar', sc_buys: 'Xaridlar', sc_recipes: 'Retseptlar', popular: 'Ommabop', look: 'Ko\'rish',
+    gr: 'g', byWeight: 'Kg / gr', toTop: 'Yuqoriga', favEmpty: 'Sevimlilar bo\'sh', favEmptySub: 'Mahsulot sahifasida ♡ ni bosing — u shu yerda saqlanadi.',
+    listPh: 'Nima olish kerak? Yozing va Enter', listClear: 'Belgilanganlarni o\'chirish', listEmpty: 'Xaridlar ro\'yxati bo\'sh', listEmptySub: 'Do\'konga borishdan oldin nima olishni yozib qo\'ying.',
+    ingredients: (n) => `${n} ta masalliq`, noRecipes: 'Hozircha retseptlar yo\'q', needed: 'Kerakli mahsulotlar', allToCart: 'Hammasini savatga',
+    aboutProduct: 'Mahsulot haqida', similar: 'O\'xshash mahsulotlar',
     t_home: 'Asosiy', t_catalog: 'Katalog', t_stores: 'Do\'konlar', t_profile: 'Profil', cart: 'Savat',
     welcome: 'Green Market\'ga xush kelibsiz', pickAddr: 'Manzilni tanlang', search: 'Mahsulot qidirish', cancel: 'Bekor qilish',
     sum: 'so\'m', kg: 'kg', pc: 'dona', soldOut: 'Tugagan', bigDeal: 'Eng katta chegirma', all: 'Barchasi', other: 'Boshqa',
@@ -74,6 +79,11 @@ const L = {
     bdayGift: (n) => `🎂 Tug'ilgan kuningiz bilan! Sizga ${fmt(n)} ball sovg'a`,
   },
   ru: {
+    sc_fav: 'Избранное', sc_list: 'Список', sc_deals: 'Скидки', sc_buys: 'Покупки', sc_recipes: 'Рецепты', popular: 'Популярное', look: 'Смотреть',
+    gr: 'г', byWeight: 'Кг / гр', toTop: 'Наверх', favEmpty: 'В избранном пусто', favEmptySub: 'Нажмите ♡ на странице товара — он сохранится здесь.',
+    listPh: 'Что купить? Напишите и Enter', listClear: 'Удалить отмеченные', listEmpty: 'Список покупок пуст', listEmptySub: 'Запишите, что купить, перед походом в магазин.',
+    ingredients: (n) => `${n} ингредиента`, noRecipes: 'Рецептов пока нет', needed: 'Нужные продукты', allToCart: 'Всё в корзину',
+    aboutProduct: 'О товаре', similar: 'Похожие товары',
     t_home: 'Главная', t_catalog: 'Каталог', t_stores: 'Магазины', t_profile: 'Профиль', cart: 'Корзина',
     welcome: 'Добро пожаловать в Green Market', pickAddr: 'Выберите адрес', search: 'Поиск товаров', cancel: 'Отмена',
     sum: 'сум', kg: 'кг', pc: 'шт', soldOut: 'Нет в наличии', bigDeal: 'Самые большие скидки', all: 'Все', other: 'Другое',
@@ -121,7 +131,7 @@ const L = {
 const S = {
   catalog: null, me: null,
   lang: local.get('lang', (tg?.initDataUnsafe?.user?.language_code || '').startsWith('ru') ? 'ru' : 'uz'),
-  cart: local.get('cart', []), admin: null, adminStatus: 'new',
+  cart: local.get('cart', []), fav: local.get('fav', []), list: local.get('list', []), admin: null, adminStatus: 'new',
 };
 const tr = (k, ...a) => { const v = (L[S.lang] || L.uz)[k] ?? L.uz[k] ?? k; return typeof v === 'function' ? v(...a) : v; };
 const pname = (p) => (S.lang === 'ru' && p.name_ru) || p.name_uz;
@@ -267,8 +277,8 @@ function lineLabel(p, it) {
   const pl = priceLine(p, it);
   if (it.reward) return `🎁 ${fmt(p.coin_price)} ${tr('balls')}`;
   if (p.unit === 'dona') return `${fmt(p.price)} ${tr('sum')} × ${it.value}`;
-  if (it.mode === 'kg') return `${kgTxt(it.value)} ${tr('kg')} × ${fmt(p.price)}`;
-  if (it.mode === 'sum') return `${fmt(it.value)} ${tr('sum')} ≈ ${kgTxt(pl.kg)} ${tr('kg')}`;
+  if (it.mode === 'kg') return `${wtTxt(it.value)} × ${fmt(p.price)}`;
+  if (it.mode === 'sum') return `${fmt(it.value)} ${tr('sum')} ≈ ${wtTxt(pl.kg)}`;
   return `${it.value} ${tr('pc')} ≈ ${kgTxt(pl.kg)} ${tr('kg')}`;
 }
 
@@ -298,6 +308,7 @@ function kgInCart(id) {
   const p = product(id); const lines = S.cart.filter((x) => x.id === id && !x.reward);
   return lines.length ? round3(lines.reduce((s, x) => s + (priceLine(p, x).kg || 0), 0)) : null;
 }
+const isFav = (id) => S.fav.includes(Number(id));
 function updateBadge() { const b = $('#cartBadge'); b.hidden = !S.cart.length; b.textContent = S.cart.length; }
 
 /* ---------------- Components ---------------- */
@@ -355,7 +366,7 @@ document.addEventListener('click', (ev) => {
   const p = product(id); if (!p) return;
   ev.stopPropagation();
   if (t.dataset.add) {
-    if (p.unit === 'kg') return productSheet(p);
+    if (p.unit === 'kg') return qtySheet(p);
     hap('medium'); addToCart({ id, mode: 'dona', value: 1 }); refreshCards(id); return;
   }
   if (t.dataset.inc || t.dataset.dec) {
@@ -364,8 +375,8 @@ document.addEventListener('click', (ev) => {
     if (l.value <= 0) S.cart = S.cart.filter((x) => x !== l);
     saveCart(); refreshCards(id); if (route()[0] === 'cart') render(true); return;
   }
-  if (t.dataset.open) return productSheet(p, S.cart.find((x) => x.id === id && !x.reward));
-  productSheet(p);
+  if (t.dataset.open) return qtySheet(p, S.cart.find((x) => x.id === id && !x.reward));
+  hap('light'); go('p/' + id);
 });
 const ACTIONS = {
   card: () => cardSheet(),
@@ -419,10 +430,10 @@ function render(silent = false) {
   const v = $('#view');
   v.classList.toggle('bare', !isTab);
   if (!silent) { v.classList.remove('anim-fade', 'anim-push', 'anim-pop'); void v.offsetWidth; v.classList.add(anim); window.scrollTo(0, 0); }
-  const R = { home, catalog, cat: category, search, stores, profile, cart, checkout, card, purchases, edit, notif, settings, addr, info, success, intro, admin };
+  const R = { home, catalog, cat: category, p: productPage, fav: favPage, list: shopList, deals, recipes, recipe, search, stores, profile, cart, checkout, card, purchases, edit, notif, settings, addr, info, success, intro, admin };
   (R[page] || home)(v, a, b);
 }
-try { tg.BackButton.onClick(() => { if (!$('#sheetWrap').hidden) return closeSheet(); history.length > 1 ? history.back() : go('home'); }); } catch {}
+try { tg.BackButton.onClick(() => { const so = $('.story'); if (so) return so.close(); if (!$('#sheetWrap').hidden) return closeSheet(); history.length > 1 ? history.back() : go('home'); }); } catch {}
 
 const needCatalog = (v) => {
   if (S.catalog) return false;
@@ -431,6 +442,12 @@ const needCatalog = (v) => {
 };
 
 /* ---------------- PAGES ---------------- */
+const SHORTCUTS = [
+  ['fav', 'heart-with-ribbon', 'sc_fav'], ['list', 'spiral-notepad', 'sc_list'], ['deals', 'label', 'sc_deals'],
+  ['purchases', 'shopping-bags', 'sc_buys'], ['recipes', 'spaghetti', 'sc_recipes'],
+];
+const fe = (n) => `https://api.iconify.design/fluent-emoji/${n}.svg`;
+
 function home(v) {
   if (needCatalog(v)) return;
   const { categories, products, banners } = S.catalog;
@@ -442,19 +459,6 @@ function home(v) {
   const pop = products.filter((p) => p.popular);
   const section = (title, list, goTo) => `<div class="sec"><div class="sec-h"><b>${e(title)}</b>${goTo ? `<button class="arrow press" data-go="${goTo}">${ic('chevron-right')}</button>` : ''}</div>
     <div class="h-scroll">${list.slice(0, 12).map(pcard).join('')}</div></div>`;
-  const block = (b) => {
-    const list = b.link_type === 'category' ? products.filter((p) => p.category_id === b.link_id) : [];
-    const goTo = b.link_type === 'category' ? `cat/${b.link_id}` : '';
-    const feat = b.link_type === 'product' ? product(b.link_id) : list[0];
-    return `<div class="block" style="background:${e(b.color || '#e11d2a')}">
-      ${goTo ? `<button class="all" data-go="${goTo}">${tr('all')} ${ic('chevron-right')}</button>` : ''}
-      <div class="head" ${feat ? `data-p="${feat.id}"` : ''}>
-        <div class="t"><b class="logo">${e(b.title || '')}</b>${feat ? `<small>${e(b.subtitle || pname(feat))}</small><strong>${fmt(feat.price)} ${tr('sum')}</strong>` : `<small>${e(b.subtitle || '')}</small>`}</div>
-        ${b.image ? `<img class="fimg lz" src="${e(b.image)}" alt="">` : ''}
-      </div>
-      ${list.length ? `<div class="h-scroll">${list.slice(0, 10).map(pcard).join('')}</div>` : ''}
-    </div>`;
-  };
   const first = secs.slice(0, 2), rest = secs.slice(2);
   v.innerHTML = `
     <div class="home-head">
@@ -465,18 +469,55 @@ function home(v) {
     </div>
     <div class="search-line"><button class="search-pill press" data-go="search">${ic('search')}${tr('search')}</button><button class="sq-btn press" data-act="card">${ic('scan-line')}</button></div>
     ${loyaltyCard()}
-    ${promos.length ? `<div class="promo-row" id="promos">${promos.map((b) => `<div class="promo press" data-banner="${b.id}">${img(b.image, 'image')}
-      ${b.title ? `<div class="cap"><small>${e(b.subtitle || '')}</small><b>${e(b.title)}</b></div>` : ''}</div>`).join('')}</div>` : ''}
-    <div class="circ-row">${categories.map((c) => `<button class="circ press" data-go="cat/${c.id}"><div class="c">${c.image ? img(c.image) : `<iconify-icon icon="${e(c.icon || 'lucide:package')}"></iconify-icon>`}</div><span>${e(cname(c))}</span></button>`).join('')}</div>
-    ${pop.length ? section('🔥 Ommabop', pop, 'catalog') : ''}
+    ${promos.length ? `<div class="promo-row" id="promos">${promos.map((b, i) => promoCard(b, i)).join('')}</div>` : ''}
+    <div class="shortcuts">${SHORTCUTS.map(([to, icon, key], i) => `<button class="sc press" data-go="${to}" style="animation-delay:${i * 50}ms"><img src="${fe(icon)}" alt=""><span>${tr(key)}</span></button>`).join('')}</div>
+    ${pop.length ? section(tr('popular'), pop, 'deals') : ''}
     ${first.map(({ c, list }) => section(cname(c), list, `cat/${c.id}`)).join('')}
-    ${deals.length ? `<div class="sec"><div class="deal"><div class="sec-h"><b>${tr('bigDeal')}</b></div><div class="h-scroll">${deals.slice(0, 12).map(pcard).join('')}</div></div></div>` : ''}
-    ${blocks.map(block).join('')}
+    ${deals.length ? `<div class="sec"><div class="deal"><div class="sec-h"><b>${tr('bigDeal')}</b><button class="arrow press" data-go="deals" style="background:var(--bg)">${ic('chevron-right')}</button></div><div class="h-scroll">${deals.slice(0, 12).map(pcard).join('')}</div></div></div>` : ''}
+    ${blocks.map(blockHtml).join('')}
     ${rest.map(({ c, list }) => section(cname(c), list, `cat/${c.id}`)).join('')}
     <div class="ask"><div><b>${tr('askTitle')}</b><button class="pill-btn press" data-act="ask">${ic('plus')}${tr('askBtn')}</button></div><div class="q">?</div></div>`;
   fillQr(v); animateProg(v);
-  v.querySelectorAll('[data-banner]').forEach((el) => el.onclick = () => openBanner(banners.find((b) => b.id === Number(el.dataset.banner))));
+  v.querySelectorAll('[data-story]').forEach((el) => el.onclick = () => {
+    const i = Number(el.dataset.story); hap('light');
+    if (storiesOf(promos[i]).length) openStories(promos, i); else openBanner(promos[i]);
+  });
   autoScroll($('#promos'));
+  blocks.forEach((b) => startBlock(b));
+}
+function promoCard(b, i) {
+  if (b.color) {
+    return `<div class="promo press" data-story="${i}" style="background:${e(b.color)}"><div class="cap"><small>${e(b.subtitle || '')}</small><b>${e(b.title || '')}</b></div>
+      ${b.image ? `<img class="pimg lz" src="${e(b.image)}" alt="">` : ''}${storiesOf(b).length > 1 ? `<span class="pdots">${storiesOf(b).map(() => '<i></i>').join('')}</span>` : ''}</div>`;
+  }
+  return `<div class="promo press" data-story="${i}">${img(b.image, 'image')}${b.title ? `<div class="cap"><small>${e(b.subtitle || '')}</small><b>${e(b.title)}</b></div>` : ''}</div>`;
+}
+function blockHtml(b) {
+  const { products } = S.catalog;
+  const list = b.link_type === 'category' ? products.filter((p) => p.category_id === b.link_id && p.in_stock) : [];
+  const goTo = b.link_type === 'category' ? `cat/${b.link_id}` : '';
+  const feats = (b.link_type === 'product' && product(b.link_id) ? [product(b.link_id)] : list).slice(0, 4);
+  return `<div class="block" id="blk${b.id}" style="background:${e(b.color || '#e11d2a')}">
+    ${goTo ? `<button class="all press" data-go="${goTo}">${tr('all')} ${ic('chevron-right')}</button>` : ''}
+    <div class="head"><b class="logo">${e(b.title || '')}</b>
+      <div class="feats">${feats.map((p, i) => `<div class="feat ${i ? '' : 'on'}" data-p="${p.id}"><div class="t"><small>${e(pname(p))}</small><strong>${fmt(p.price)} ${tr('sum')}</strong></div>
+        ${p.image ? `<img class="lz" src="${e(p.image)}" alt="">` : ''}</div>`).join('')}</div>
+      ${feats.length > 1 ? `<div class="bdots">${feats.map((_, i) => `<i class="${i ? '' : 'on'}"></i>`).join('')}</div>` : ''}
+    </div>
+    ${list.length ? `<div class="h-scroll">${list.slice(0, 10).map(pcard).join('')}</div>` : ''}
+  </div>`;
+}
+function startBlock(b) {
+  const el = $('#blk' + b.id); if (!el) return;
+  const feats = $$('.feat', el), dots = $$('.bdots i', el);
+  if (feats.length < 2) return;
+  let i = 0;
+  timers.push(setInterval(() => {
+    if (document.hidden) return;
+    i = (i + 1) % feats.length;
+    feats.forEach((f, k) => f.classList.toggle('on', k === i));
+    dots.forEach((d, k) => d.classList.toggle('on', k === i));
+  }, 3200));
 }
 function autoScroll(row) {
   if (!row || row.children.length < 2) return;
@@ -485,7 +526,7 @@ function autoScroll(row) {
   row.addEventListener('touchend', () => setTimeout(() => { paused = false; }, 2500));
   const ms = Math.max(1000, Number(setting('banner', { interval_ms: 3000 }).interval_ms) || 3000);
   timers.push(setInterval(() => {
-    if (paused || document.hidden) return;
+    if (paused || document.hidden || $('.story')) return;
     const w = row.children[0].offsetWidth + 10;
     const atEnd = row.scrollLeft + row.clientWidth >= row.scrollWidth - 8;
     row.scrollTo({ left: atEnd ? 0 : row.scrollLeft + w, behavior: 'smooth' });
@@ -493,8 +534,60 @@ function autoScroll(row) {
 }
 function openBanner(b) {
   if (!b) return;
-  if (b.link_type === 'product' && product(b.link_id)) productSheet(product(b.link_id));
+  if (b.link_type === 'product' && product(b.link_id)) go('p/' + b.link_id);
   if (b.link_type === 'category') go('cat/' + b.link_id);
+}
+
+/* ---------- Istoriyalar (bannerga bosilganda) ---------- */
+const storiesOf = (b) => (Array.isArray(b?.stories) ? b.stories.filter((s) => s && (s.title || s.image)) : []);
+function openStories(groups, gi) {
+  const DUR = 5000;
+  const el = document.createElement('div'); el.className = 'story';
+  document.body.appendChild(el);
+  let g = gi, s = 0, t0 = 0, elapsed = 0, paused = false, raf = 0;
+  try { tg.BackButton.show(); } catch {}
+  const close = () => {
+    cancelAnimationFrame(raf); el.classList.add('out');
+    setTimeout(() => el.remove(), 300);
+    try { if (TABS.includes(route()[0])) tg.BackButton.hide(); } catch {}
+  };
+  el.close = close;
+  const draw = () => {
+    const b = groups[g]; const list = storiesOf(b); const st = list[s];
+    el.innerHTML = `<div class="st-top"><div class="st-bars">${list.map((_, k) => `<i><b style="width:${k < s ? 100 : 0}%"></b></i>`).join('')}</div>
+      <div class="st-head"><b>${e(b.story_title || b.title || '')}</b><button class="st-x">${ic('x')}</button></div></div>
+      <div class="st-body"><h1>${e(st.title || '')}</h1>${st.text ? `<p>${e(st.text)}</p>` : ''}${st.image ? `<img src="${e(st.image)}" alt="">` : ''}</div>
+      ${b.link_type !== 'none' && b.link_type ? `<div class="st-foot"><button class="btn" data-more>${tr('look')}</button></div>` : ''}
+      <div class="st-tap l"></div><div class="st-tap r"></div>`;
+    $('.st-x', el).onclick = close;
+    const more = $('[data-more]', el); if (more) more.onclick = () => { close(); openBanner(b); };
+    $('.st-tap.l', el).onclick = () => step(-1);
+    $('.st-tap.r', el).onclick = () => step(1);
+    elapsed = 0; t0 = performance.now();
+  };
+  const step = (d) => {
+    hap('light');
+    const n = storiesOf(groups[g]).length;
+    if (s + d >= n) { let ng = g + 1; while (ng < groups.length && !storiesOf(groups[ng]).length) ng++; if (ng >= groups.length) return close(); g = ng; s = 0; }
+    else if (s + d < 0) { let pg = g - 1; while (pg >= 0 && !storiesOf(groups[pg]).length) pg--; if (pg < 0) { s = 0; } else { g = pg; s = storiesOf(groups[g]).length - 1; } }
+    else s += d;
+    draw();
+  };
+  const tick = (now) => {
+    if (!el.isConnected) return;
+    if (!paused) { elapsed += now - t0; }
+    t0 = now;
+    const bar = $$('.st-bars i b', el)[s];
+    if (bar) bar.style.width = Math.min(100, (elapsed / DUR) * 100) + '%';
+    if (elapsed >= DUR) step(1);
+    raf = requestAnimationFrame(tick);
+  };
+  el.addEventListener('pointerdown', () => { paused = true; });
+  el.addEventListener('pointerup', () => { paused = false; });
+  let y0 = null;
+  el.addEventListener('touchstart', (ev) => { y0 = ev.touches[0].clientY; }, { passive: true });
+  el.addEventListener('touchend', (ev) => { if (y0 !== null && ev.changedTouches[0].clientY - y0 > 90) close(); y0 = null; });
+  draw(); raf = requestAnimationFrame(tick);
 }
 
 function catalog(v) {
@@ -505,18 +598,114 @@ function catalog(v) {
     let x = groups.find((y) => y.g === g); if (!x) groups.push(x = { g, list: [] });
     x.list.push(c);
   }
+  // Magnit kabi mozaika: juft qatorlar 7/5, toq qatorlar 6/6, yolg'iz plitka butun qator
+  const span = (i, n) => {
+    if (n % 2 && i === n - 1) return 12;
+    const row = Math.floor(i / 2);
+    return row % 2 ? (i % 2 ? 5 : 7) : 6;
+  };
   v.innerHTML = `<div class="top-space"></div>
-    <div class="search-line"><button class="search-pill press" data-go="search">${ic('search')}${tr('search')}</button><button class="sq-btn press" data-act="card">${ic('scan-line')}</button></div>
+    <div class="search-line"><button class="search-pill press" data-go="search">${ic('search')}${tr('search')}<span style="margin-left:auto;font-size:20px;color:var(--text)">${ic('scan-line')}</span></button></div>
     ${groups.map(({ g, list }) => `<div class="grp"><h2>${e(g)}</h2><div class="ctiles">${list.map((c, i) => `
-      <button class="ctile press ${list.length % 2 && i === list.length - 1 ? 'wide' : ''}" data-go="cat/${c.id}" style="animation-delay:${i * 40}ms">
-        <b>${e(cname(c))}</b>${c.image ? `<img class="lz" src="${e(c.image)}" alt="">` : `<span class="ico"><iconify-icon icon="${e(c.icon || 'lucide:package')}"></iconify-icon></span>`}</button>`).join('')}</div></div>`).join('')}`;
+      <button class="ctile press" data-go="cat/${c.id}" style="grid-column:span ${span(i, list.length)};animation-delay:${i * 40}ms">
+        <b>${e(cname(c))}</b>${c.image ? `<img class="lz ${String(c.image).includes('iconify.design') ? 'emo' : ''}" src="${e(c.image)}" alt="">` : `<span class="ico"><iconify-icon icon="${e(c.icon || 'lucide:package')}"></iconify-icon></span>`}</button>`).join('')}</div></div>`).join('')}`;
 }
 
+// Kategoriya ichi: tepada bo'lim kategoriyalari, ostida kichik bo'limlar (scrollspy), har biri o'z sarlavhasi bilan
 function category(v, id) {
   if (needCatalog(v)) return;
   const c = S.catalog.categories.find((x) => x.id === Number(id));
-  const list = S.catalog.products.filter((p) => p.category_id === Number(id));
-  v.innerHTML = navbar(c ? cname(c) : tr('t_catalog')) + (list.length ? `<div class="p-grid" style="padding-top:8px">${list.map(pcard).join('')}</div>` : emptyState('package', tr('nothing'), ''));
+  if (!c) { v.innerHTML = navbar(tr('t_catalog')) + emptyState('package', tr('nothing'), ''); return; }
+  const siblings = S.catalog.categories.filter((x) => (x.grp || '') === (c.grp || ''));
+  const list = S.catalog.products.filter((p) => p.category_id === c.id);
+  const subs = [];
+  for (const p of list) {
+    const s = p.sub || cname(c);
+    let x = subs.find((y) => y.s === s); if (!x) subs.push(x = { s, list: [] });
+    x.list.push(p);
+  }
+  v.innerHTML = `<div class="navbar cat-nav"><div class="in"><button class="back press" data-back>${ic('chevron-left')}</button><h1>${tr('t_catalog')}</h1></div>
+      <div class="tabs1" id="tabs1">${siblings.map((x) => `<button class="${x.id === c.id ? 'on' : ''}" data-cid="${x.id}">${e(cname(x))}</button>`).join('')}</div>
+      ${subs.length > 1 ? `<div class="tabs2" id="tabs2">${subs.map((x, i) => `<button class="${i ? '' : 'on'}" data-sub="${i}">${e(x.s)}</button>`).join('')}</div>` : ''}
+    </div>
+    ${list.length ? subs.map((x, i) => `<section class="subsec" id="sub${i}"><h3>${e(x.s)}</h3><div class="p-grid">${x.list.map(pcard).join('')}</div></section>`).join('') : emptyState('package', tr('nothing'), '')}
+    <button class="totop" id="totop">${ic('arrow-up')}${tr('toTop')}</button>`;
+  $('#tabs1 .on')?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  v.querySelectorAll('[data-cid]').forEach((b) => b.onclick = () => { if (Number(b.dataset.cid) === c.id) return; hap('light'); location.replace('#cat/' + b.dataset.cid); });
+  const navH = () => $('.cat-nav').offsetHeight + 6;
+  v.querySelectorAll('[data-sub]').forEach((b) => b.onclick = () => {
+    hap('light'); lock = true;
+    const sec = $('#sub' + b.dataset.sub);
+    window.scrollTo({ top: sec.getBoundingClientRect().top + window.scrollY - navH(), behavior: 'smooth' });
+    setActive(Number(b.dataset.sub)); setTimeout(() => { lock = false; }, 700);
+  });
+  let lock = false;
+  const setActive = (i) => {
+    $$('#tabs2 button').forEach((x, k) => x.classList.toggle('on', k === i));
+    const btn = $$('#tabs2 button')[i];
+    if (btn) $('#tabs2').scrollTo({ left: btn.offsetLeft - 16, behavior: 'smooth' });
+  };
+  const onScroll = () => {
+    if (!$('#totop')) return window.removeEventListener('scroll', onScroll);
+    $('#totop').classList.toggle('show', window.scrollY > 500);
+    if (lock || subs.length < 2) return;
+    const y = navH() + 10; let cur = 0;
+    $$('.subsec').forEach((s, i) => { if (s.getBoundingClientRect().top <= y) cur = i; });
+    if (!$$('#tabs2 button')[cur]?.classList.contains('on')) setActive(cur);
+  };
+  window.addEventListener('scroll', onScroll, { passive: true });
+  $('#totop').onclick = () => { hap('light'); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+}
+
+function favPage(v) {
+  if (needCatalog(v)) return;
+  const list = S.fav.map(product).filter(Boolean);
+  v.innerHTML = navbar(tr('sc_fav')) + (list.length ? `<div class="p-grid" style="padding-top:8px">${list.map(pcard).join('')}</div>`
+    : emptyState('heart', tr('favEmpty'), tr('favEmptySub'), `<button class="btn" style="max-width:240px;margin:0 auto" data-go="catalog">${tr('goShop')}</button>`));
+}
+function deals(v) {
+  if (needCatalog(v)) return;
+  const pop = S.catalog.products.filter((p) => p.popular);
+  const list = S.catalog.products.filter((p) => p.old_price > p.price);
+  v.innerHTML = navbar(tr('sc_deals')) + (list.length ? `<div class="p-grid" style="padding-top:8px">${list.map(pcard).join('')}</div>` : emptyState('percent', tr('nothing'), '')) +
+    (pop.length ? `<div class="sec"><div class="sec-h"><b>${tr('popular')}</b></div><div class="p-grid">${pop.map(pcard).join('')}</div></div>` : '');
+}
+function shopList(v) {
+  const draw = () => {
+    v.innerHTML = navbar(tr('sc_list')) + `<div class="search-line"><label class="search-pill">${ic('plus')}<input id="liIn" placeholder="${tr('listPh')}" enterkeyhint="done"></label></div>
+      ${S.list.length ? `<div class="rows">${S.list.map((x, i) => `<div class="row li ${x.done ? 'done' : ''}"><button class="lchk ${x.done ? 'on' : ''}" data-li="${i}">${x.done ? ic('check') : ''}</button>
+        <span class="tx">${e(x.t)}</span><button class="trash muted" data-ld="${i}">${ic('x')}</button></div>`).join('')}</div>
+        ${S.list.some((x) => x.done) ? `<div class="pad" style="margin-top:12px"><button class="btn ghost" id="liClear">${tr('listClear')}</button></div>` : ''}`
+      : emptyState('list-checks', tr('listEmpty'), tr('listEmptySub'))}`;
+    const inp = $('#liIn');
+    inp.onkeydown = (ev) => { if (ev.key === 'Enter' && inp.value.trim()) { S.list.unshift({ t: inp.value.trim().slice(0, 80), done: false }); cloud.set('list', S.list); hap('light'); draw(); $('#liIn').focus(); } };
+    v.querySelectorAll('[data-li]').forEach((b) => b.onclick = () => { const x = S.list[b.dataset.li]; x.done = !x.done; cloud.set('list', S.list); hap('light'); draw(); });
+    v.querySelectorAll('[data-ld]').forEach((b) => b.onclick = () => { S.list.splice(b.dataset.ld, 1); cloud.set('list', S.list); draw(); });
+    const cl = $('#liClear'); if (cl) cl.onclick = () => { S.list = S.list.filter((x) => !x.done); cloud.set('list', S.list); draw(); };
+  };
+  draw();
+}
+function recipes(v) {
+  if (needCatalog(v)) return;
+  const list = S.catalog.recipes || [];
+  v.innerHTML = navbar(tr('sc_recipes')) + (list.length ? `<div class="rgrid">${list.map((r, i) => `<button class="rcard press" data-go="recipe/${r.id}" style="animation-delay:${i * 50}ms">
+      <div class="rim">${img(r.image, 'chef-hat')}</div><b>${e((S.lang === 'ru' && r.title_ru) || r.title_uz)}</b><small>${tr('ingredients', (r.product_ids || []).length)}</small></button>`).join('')}</div>`
+    : emptyState('chef-hat', tr('noRecipes'), ''));
+}
+function recipe(v, id) {
+  if (needCatalog(v)) return;
+  const r = (S.catalog.recipes || []).find((x) => x.id === Number(id));
+  if (!r) { v.innerHTML = navbar(tr('sc_recipes')) + emptyState('chef-hat', tr('nothing'), ''); return; }
+  const items = (r.product_ids || []).map(product).filter(Boolean);
+  v.innerHTML = navbar((S.lang === 'ru' && r.title_ru) || r.title_uz) + `<div class="rhero">${img(r.image, 'chef-hat')}</div>
+    <div class="pad"><p style="white-space:pre-wrap;line-height:1.6;font-size:15px">${e((S.lang === 'ru' && r.body_ru) || r.body_uz || '')}</p></div>
+    ${items.length ? `<div class="sec"><div class="sec-h"><b>${tr('needed')}</b></div><div class="p-grid">${items.map(pcard).join('')}</div></div>
+    <div style="height:90px"></div><div class="paybar"><button class="btn" id="allIn">${ic('shopping-bag')}${tr('allToCart')}</button></div>` : ''}`;
+  const b = $('#allIn');
+  if (b) b.onclick = () => {
+    items.filter((p) => p.in_stock).forEach((p) => { if (!S.cart.some((x) => x.id === p.id && !x.reward)) addToCart(p.unit === 'kg' ? { id: p.id, mode: 'kg', value: 0.5 } : { id: p.id, mode: 'dona', value: 1 }); refreshCards(p.id); });
+    toast(tr('added'), 'success');
+  };
 }
 
 function search(v) {
@@ -541,76 +730,130 @@ function search(v) {
   draw(); setTimeout(() => q.focus(), 350);
 }
 
-/* ---------- Product sheet ---------- */
-function productSheet(p, editLine) {
-  const isKg = p.unit === 'kg';
-  const st = { mode: editLine ? editLine.mode : (isKg ? 'kg' : 'dona'), value: editLine ? editLine.value : 1 };
+/* ---------- Miqdor tanlash (dona / kg-gr / summa) ---------- */
+const wtTxt = (kg) => (kg < 1 ? `${Math.round(kg * 1000)} ${tr('gr')}` : `${kgTxt(kg)} ${tr('kg')}`);
+function qtyState(p, line) {
+  if (line) return { mode: line.mode === 'dona' && p.unit === 'kg' ? 'kg' : line.mode, value: line.mode === 'dona' && p.unit === 'kg' ? 1 : line.value };
+  return { mode: p.unit === 'kg' ? 'kg' : 'dona', value: p.unit === 'kg' ? 1 : 1 };
+}
+function qtyHtml(p, st) {
+  if (!p.in_stock) return '';
+  if (p.unit !== 'kg') {
+    return `<div class="stepper"><button data-d="-1">${ic('minus')}</button><div class="v"><b class="big" id="qv">${st.value}</b><small>${tr('pc')}</small></div><button data-d="1">${ic('plus')}</button></div>`;
+  }
   const minKg = Number(p.min_kg || 0.1), minSum = round100(p.price * minKg);
-  const defaults = { kg: 1, sum: 10000, dona: 1 };
-  const disc = p.old_price && p.old_price > p.price ? Math.round((1 - p.price / p.old_price) * 100) : 0;
-  const draw = () => {
-    const modes = isKg ? [['kg', tr('byKg')], ['sum', tr('bySum')], ...(p.piece_kg ? [['dona', tr('byPc')]] : [])] : [];
-    const stepper = (val, unit, mode) => `<div class="stepper"><button data-d="-1">${ic('minus')}</button>
-      <div class="v"><input id="val" type="text" inputmode="${mode === 'kg' ? 'decimal' : 'numeric'}" value="${val}"><small>${unit}</small></div><button data-d="1">${ic('plus')}</button></div>`;
-    let body = '';
-    if (st.mode === 'kg') body = stepper(kgTxt(st.value), tr('kg'), 'kg') + `<div class="chips">${[0.5, 1, 1.5, 2, 3, 5].filter((x) => x >= minKg).map((x) => `<button class="chip" data-set="${x}">${kgTxt(x)} ${tr('kg')}</button>`).join('')}</div>`;
-    else if (st.mode === 'sum') body = `<div class="sub" style="margin-bottom:8px">${tr('enterSum')}</div>` + stepper(fmt(st.value), tr('sum'), 'sum') + `<div class="chips">${[2000, 3000, 5000, 10000, 20000, 50000].filter((x) => x >= minSum).map((x) => `<button class="chip" data-set="${x}">${fmt(x)}</button>`).join('')}</div>`;
-    else body = stepper(st.value, tr('pc'), 'dona') + (isKg ? `<div class="note">${ic('info')}<span>${tr('estNote')}</span></div>` : '');
-    return `<div class="big-im">${img(p.image)}</div>
-      <h3>${e(pname(p))}</h3>
-      <div class="sub"><b style="color:var(--text);font-size:19px">${fmt(p.price)} ${tr('sum')}</b>${isKg ? ' · ' + tr('perKg') : ''}${disc ? ` &nbsp;<s>${fmt(p.old_price)}</s> <b style="color:var(--danger)">−${disc}%</b>` : ''}</div>
-      ${pdesc(p) ? `<p class="sub">${e(pdesc(p))}</p>` : ''}
-      ${modes.length && p.in_stock ? `<div class="segm">${modes.map(([m, t]) => `<button data-mode="${m}" class="${st.mode === m ? 'on' : ''}">${t}</button>`).join('')}</div>` : ''}
-      ${p.in_stock ? body : ''}
-      <div id="calc" class="sub" style="text-align:center;min-height:19px"></div>
-      ${p.in_stock ? `<button class="btn" id="addBtn"><span id="addTxt"></span></button>` : `<button class="btn" disabled>${tr('soldOut')}</button>`}
-      ${editLine ? `<button class="btn danger" id="delBtn" style="margin-top:4px">${ic('trash-2')}${tr('remove')}</button>` : ''}`;
-  };
-  const valid = () => (st.mode === 'kg' ? st.value >= minKg : st.mode === 'sum' ? st.value >= minSum : st.value >= 1);
-  const refresh = (root) => {
-    if (!p.in_stock) return;
-    const pl = priceLine(p, { mode: st.mode, value: st.value }); const calc = $('#calc', root);
-    if (!valid()) calc.innerHTML = `<span style="color:var(--danger)">${tr('minIs')} ${st.mode === 'sum' ? fmt(minSum) + ' ' + tr('sum') : st.mode === 'kg' ? kgTxt(minKg) + ' ' + tr('kg') : '1'}</span>`;
-    else if (st.mode === 'sum') calc.textContent = `≈ ${kgTxt(pl.kg)} ${tr('kg')}`;
-    else if (st.mode === 'dona' && isKg) calc.textContent = `≈ ${kgTxt(pl.kg)} ${tr('kg')} · ${tr('approx')} ${fmt(pl.total)} ${tr('sum')}`;
-    else calc.textContent = '';
-    const btn = $('#addBtn', root);
-    if (btn) { btn.disabled = !valid(); $('#addTxt', root).textContent = `${editLine ? tr('save') : tr('addCart')} · ${pl.est ? '~' : ''}${fmt(pl.total)} ${tr('sum')}`; }
-  };
-  const mount = (root) => {
-    root.querySelectorAll('[data-mode]').forEach((b) => b.onclick = () => { hap('light'); st.mode = b.dataset.mode; st.value = defaults[st.mode]; root.innerHTML = draw(); mount(root); });
-    const inp = $('#val', root);
-    const show = () => { inp.value = st.mode === 'kg' ? kgTxt(st.value) : st.mode === 'sum' ? fmt(st.value) : st.value; };
-    if (inp) {
-      inp.oninput = () => {
-        const raw = inp.value.replace(/\s/g, '').replace(',', '.');
-        const n = st.mode === 'kg' ? parseFloat(raw) : parseInt(raw, 10);
-        st.value = Number.isFinite(n) ? n : 0;
-        if (st.mode === 'sum' && Number.isFinite(n)) inp.value = fmt(n);
-        refresh(root);
-      };
-      inp.onfocus = () => inp.select();
-    }
-    root.querySelectorAll('[data-d]').forEach((b) => b.onclick = () => {
-      hap('light'); const d = Number(b.dataset.d);
-      if (st.mode === 'kg') { const step = st.value < 1 || (st.value === 1 && d < 0) ? 0.1 : 0.5; st.value = Math.max(minKg, round3(st.value + d * step)); }
-      else if (st.mode === 'sum') st.value = Math.max(minSum, st.value + d * 1000);
-      else st.value = Math.max(1, st.value + d);
-      show(); refresh(root);
+  return `<div class="segm"><button data-mode="kg" class="${st.mode === 'kg' ? 'on' : ''}">${tr('byWeight')}</button><button data-mode="sum" class="${st.mode === 'sum' ? 'on' : ''}">${tr('bySum')}</button></div>
+    ${st.mode === 'kg'
+      ? `<div class="stepper"><button data-d="-1">${ic('minus')}</button><div class="v"><b class="big" id="qv">${wtTxt(st.value)}</b><small>${fmt(round100(p.price * st.value))} ${tr('sum')}</small></div><button data-d="1">${ic('plus')}</button></div>
+        <div class="chips">${[0.2, 0.3, 0.5, 1, 1.5, 2, 3].filter((x) => x >= minKg).map((x) => `<button class="chip ${x === st.value ? 'on' : ''}" data-set="${x}">${wtTxt(x)}</button>`).join('')}</div>`
+      : `<div class="stepper"><button data-d="-1">${ic('minus')}</button><div class="v"><input id="qsum" type="text" inputmode="numeric" value="${fmt(st.value)}"><small id="qkg">≈ ${wtTxt(st.value / p.price)}</small></div><button data-d="1">${ic('plus')}</button></div>
+        <div class="chips">${[3000, 5000, 10000, 15000, 20000, 50000].filter((x) => x >= minSum).map((x) => `<button class="chip ${x === st.value ? 'on' : ''}" data-set="${x}">${fmt(x)}</button>`).join('')}</div>`}`;
+}
+// Boshqaruv tugmalarini ulaydi; onChange(st) — summa/tugmani yangilash uchun
+function bindQty(root, p, st, onChange) {
+  const minKg = Number(p.min_kg || 0.1), minSum = round100(p.price * minKg);
+  const redraw = () => { $('#qtyBox', root).innerHTML = qtyHtml(p, st); bind(); onChange(st); };
+  const bind = () => {
+    root.querySelectorAll('#qtyBox [data-mode]').forEach((b) => b.onclick = () => {
+      hap('light'); const kg = st.mode === 'kg' ? st.value : st.value / p.price;
+      st.mode = b.dataset.mode; st.value = st.mode === 'kg' ? Math.max(minKg, round3(Math.round(kg * 10) / 10 || 1)) : Math.max(minSum, round100(p.price * kg) || 10000);
+      redraw();
     });
-    root.querySelectorAll('[data-set]').forEach((b) => b.onclick = () => { hap('light'); st.value = Number(b.dataset.set); show(); refresh(root); });
-    const add = $('#addBtn', root);
-    if (add) add.onclick = () => {
-      if (!valid()) return;
-      addToCart({ id: p.id, mode: st.mode, value: st.mode === 'kg' ? round3(st.value) : Math.floor(st.value) }, editLine?.k);
-      toast(editLine ? tr('saved') : tr('added'), 'success'); closeSheet(); refreshCards(p.id);
-      if (route()[0] === 'cart') render(true);
-    };
-    const del = $('#delBtn', root);
-    if (del) del.onclick = () => { S.cart = S.cart.filter((x) => x.k !== editLine.k); saveCart(); closeSheet(); refreshCards(p.id); if (route()[0] === 'cart') render(true); };
-    refresh(root);
+    root.querySelectorAll('#qtyBox [data-d]').forEach((b) => b.onclick = () => {
+      hap('light'); const d = Number(b.dataset.d);
+      if (p.unit !== 'kg') st.value = Math.max(1, st.value + d);
+      else if (st.mode === 'kg') { const stp = st.value < 1 || (st.value === 1 && d < 0) ? 0.1 : 0.25; st.value = Math.max(minKg, round3(st.value + d * stp)); }
+      else st.value = Math.max(minSum, st.value + d * 1000);
+      redraw();
+    });
+    root.querySelectorAll('#qtyBox [data-set]').forEach((b) => b.onclick = () => { hap('light'); st.value = Number(b.dataset.set); redraw(); });
+    const inp = $('#qsum', root);
+    if (inp) {
+      inp.onfocus = () => inp.select();
+      inp.oninput = () => {
+        const n = parseInt(inp.value.replace(/\D/g, ''), 10) || 0;
+        st.value = n; inp.value = n ? fmt(n) : '';
+        $('#qkg', root).textContent = n >= minSum ? `≈ ${wtTxt(n / p.price)}` : `${tr('minIs')} ${fmt(minSum)} ${tr('sum')}`;
+        onChange(st);
+      };
+    }
   };
-  openSheet(draw(), mount);
+  bind(); onChange(st);
+}
+const qtyValid = (p, st) => {
+  if (p.unit !== 'kg') return st.value >= 1;
+  const minKg = Number(p.min_kg || 0.1);
+  return st.mode === 'kg' ? st.value >= minKg : st.value >= round100(p.price * minKg);
+};
+function commitQty(p, st, line) {
+  addToCart({ id: p.id, mode: st.mode, value: st.mode === 'kg' ? round3(st.value) : Math.floor(st.value) }, line?.k);
+  refreshCards(p.id);
+}
+
+// Tezkor oyna: kilolik mahsulotdagi "+" yoki savatdagi "O'zgartirish"
+function qtySheet(p, line) {
+  const st = qtyState(p, line);
+  openSheet(`<div class="qhead"><div class="qim">${img(p.image)}</div><div><h3>${e(pname(p))}</h3><div class="sub" style="margin:0">${fmt(p.price)} ${tr('sum')}${p.unit === 'kg' ? ' / ' + tr('kg') : ''}</div></div></div>
+    <div id="qtyBox">${qtyHtml(p, st)}</div>
+    <button class="btn" id="qAdd"></button>${line ? `<button class="btn danger" id="qDel" style="margin-top:4px">${ic('trash-2')}${tr('remove')}</button>` : ''}`, (root) => {
+    bindQty(root, p, st, () => {
+      const b = $('#qAdd', root); const ok = qtyValid(p, st); b.disabled = !ok;
+      b.textContent = `${line ? tr('save') : tr('addCart')} · ${fmt(priceLine(p, st).total)} ${tr('sum')}`;
+    });
+    $('#qAdd', root).onclick = () => { if (!qtyValid(p, st)) return; commitQty(p, st, line); toast(line ? tr('saved') : tr('added'), 'success'); closeSheet(); if (route()[0] === 'cart') render(true); };
+    const d = $('#qDel', root);
+    if (d) d.onclick = () => { S.cart = S.cart.filter((x) => x.k !== line.k); saveCart(); closeSheet(); refreshCards(p.id); if (route()[0] === 'cart') render(true); };
+  });
+}
+
+/* ---------- Mahsulot sahifasi ---------- */
+function productPage(v, id) {
+  if (needCatalog(v)) return;
+  const p = product(id);
+  if (!p) { v.innerHTML = navbar('') + emptyState('package', tr('nothing'), ''); return; }
+  const disc = p.old_price && p.old_price > p.price ? Math.round((1 - p.price / p.old_price) * 100) : 0;
+  const similar = S.catalog.products.filter((x) => x.id !== p.id && x.category_id === p.category_id)
+    .sort((a, b) => (b.sub === p.sub) - (a.sub === p.sub)).slice(0, 12);
+  const line = S.cart.find((x) => x.id === p.id && !x.reward);
+  const st = qtyState(p, line);
+  v.innerHTML = `<div class="pp-hero">${img(p.image)}
+      <button class="pp-btn l press" data-back>${ic('chevron-left')}</button>
+      <div class="pp-r"><button class="pp-btn press" id="ppFav">${ic(isFav(p.id) ? 'mdi:heart' : 'heart')}</button><button class="pp-btn press" id="ppShare">${ic('share')}</button></div>
+      ${disc ? `<span class="pp-disc">−${disc}%</span>` : ''}</div>
+    <div class="pp-body">
+      <h1>${e(pname(p))}</h1>
+      <div class="pp-price">${fmt(p.price)} ${tr('sum')}${p.unit === 'kg' ? `<small> / ${tr('kg')}</small>` : ''}${disc ? `<s>${fmt(p.old_price)}</s>` : ''}</div>
+      ${p.in_stock ? `<div id="qtyBox">${qtyHtml(p, st)}</div>` : `<div class="note">${ic('info')}<span>${tr('soldOut')}</span></div>`}
+      ${pdesc(p) ? `<h3>${tr('aboutProduct')}</h3><p class="muted" style="line-height:1.55;margin:0 0 8px">${e(pdesc(p))}</p>` : ''}
+    </div>
+    ${similar.length ? `<div class="sec" style="padding-top:12px"><div class="sec-h"><b style="font-size:20px">${tr('similar')}</b></div><div class="p-grid">${similar.map(pcard).join('')}</div></div>` : ''}
+    <div style="height:96px"></div>
+    ${p.in_stock ? `<div class="paybar"><div class="sum"><b id="ppTotal"></b><small id="ppSub"></small></div><button class="btn" id="ppAdd"></button></div>` : ''}`;
+  $('#ppFav').onclick = () => {
+    hap('light'); S.fav = isFav(p.id) ? S.fav.filter((x) => x !== p.id) : [p.id, ...S.fav]; cloud.set('fav', S.fav);
+    $('#ppFav').innerHTML = ic(isFav(p.id) ? 'mdi:heart' : 'heart'); $('#ppFav').classList.toggle('on', isFav(p.id));
+  };
+  $('#ppFav').classList.toggle('on', isFav(p.id));
+  $('#ppShare').onclick = () => {
+    const bot = tg?.initDataUnsafe?.receiver?.username;
+    const text = `${pname(p)} — ${fmt(p.price)} ${tr('sum')}`;
+    const url = `https://t.me/share/url?url=${encodeURIComponent(bot ? `https://t.me/${bot}` : location.origin)}&text=${encodeURIComponent(text)}`;
+    try { tg.openTelegramLink(url); } catch { open(url); }
+  };
+  if (!p.in_stock) return;
+  bindQty(v, p, st, () => {
+    const ok = qtyValid(p, st);
+    const pl = priceLine(p, st);
+    $('#ppTotal').textContent = `${fmt(ok ? pl.total : 0)} ${tr('sum')}`;
+    $('#ppSub').textContent = p.unit === 'kg' ? (st.mode === 'kg' ? wtTxt(st.value) : `≈ ${wtTxt(st.value / p.price)}`) : `${st.value} ${tr('pc')}`;
+    const b = $('#ppAdd'); b.disabled = !ok;
+    b.innerHTML = `${ic('shopping-bag')}${line ? tr('save') : tr('addCart')}`;
+  });
+  $('#ppAdd').onclick = () => {
+    if (!qtyValid(p, st)) return;
+    commitQty(p, st, line); hap('success'); toast(line ? tr('saved') : tr('added'));
+    render(true);
+  };
 }
 
 /* ---------- Stores (map) ---------- */
@@ -897,7 +1140,7 @@ function cart(v) {
     <div class="paybar"><div class="sum"><b>${fmt(t.total)} ${tr('sum')}</b><small>${tr('items', t.n)}</small></div>
       <button class="btn" id="goCheckout" ${t.subtotal && t.subtotal < t.min ? 'disabled' : ''}>${tr('checkout')}${t.subtotal && t.subtotal < t.min ? `<small>${tr('minOrder')} ${fmt(t.min)}</small>` : ''}</button></div>`;
   v.querySelectorAll('[data-del]').forEach((b) => b.onclick = () => { hap('medium'); const it = S.cart.find((x) => x.k === b.dataset.del); S.cart = S.cart.filter((x) => x !== it); saveCart(); render(true); });
-  v.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { const it = S.cart.find((x) => x.k === b.dataset.k); productSheet(product(it.id), it); });
+  v.querySelectorAll('[data-k]').forEach((b) => b.onclick = () => { const it = S.cart.find((x) => x.k === b.dataset.k); qtySheet(product(it.id), it); });
   $('#goCheckout').onclick = () => go('checkout');
 }
 function checkout(v) {
@@ -1025,13 +1268,13 @@ function adminOrderActions(o) {
 }
 async function admin(v, tab = 'orders') {
   if (!S.me?.is_admin) { v.innerHTML = '<div class="top-space"></div>' + emptyState('shield-x', 'Ruxsat yo\'q', 'Admin panel faqat admin bot orqali ochiladi.'); return; }
-  const tabs = [['orders', 'Buyurtmalar'], ['products', 'Mahsulotlar'], ['categories', 'Kategoriyalar'], ['banners', 'Bannerlar'], ['stores', 'Do\'konlar'], ['faq', 'Savollar'], ['settings', 'Sozlamalar']];
+  const tabs = [['orders', 'Buyurtmalar'], ['products', 'Mahsulotlar'], ['categories', 'Kategoriyalar'], ['banners', 'Banner va istoriya'], ['recipes', 'Retseptlar'], ['stores', 'Do\'konlar'], ['faq', 'Savollar'], ['settings', 'Sozlamalar']];
   v.innerHTML = `${navbar('Admin panel', false)}<div class="admin-tabs">${tabs.map(([k, t]) => `<button class="chip ${k === tab ? 'on' : ''}" data-tab2="${k}">${t}</button>`).join('')}</div><div id="adm"><div class="sk" style="height:120px;margin:0 16px"></div></div>`;
   v.querySelectorAll('[data-tab2]').forEach((b) => b.onclick = () => { hap('light'); location.replace('#admin/' + b.dataset.tab2); });
   $('.admin-tabs .chip.on')?.scrollIntoView({ inline: 'center', block: 'nearest' });
   try {
     if (!S.admin) S.admin = await api('/api/admin/all');
-    ({ orders: admOrders, products: admProducts, categories: admCategories, banners: admBanners, stores: admStores, faq: admFaq, settings: admSettings })[tab]?.($('#adm'));
+    ({ orders: admOrders, products: admProducts, categories: admCategories, banners: admBanners, recipes: admRecipes, stores: admStores, faq: admFaq, settings: admSettings })[tab]?.($('#adm'));
   } catch (err) { $('#adm').innerHTML = emptyState('cloud-off', err.message, ''); }
 }
 const reloadAdmin = async () => { S.admin = await api('/api/admin/all'); render(true); };
@@ -1072,6 +1315,7 @@ function productForm(p) {
     { k: 'image', t: 'image', label: 'Rasm (kvadrat)' },
     { k: 'name_uz', label: 'Nomi (o\'zbekcha)', req: true }, { k: 'name_ru', label: 'Nomi (ruscha)' },
     { k: 'category_id', t: 'select', label: 'Kategoriya', num: true, opts: [['', '—'], ...A.categories.map((c) => [c.id, c.name_uz])] },
+    { k: 'sub', label: 'Kichik bo\'lim (masalan: Bodringlar, Pomidorlar)' },
     { k: 'unit', t: 'select', label: 'O\'lchov', opts: [['dona', 'Dona'], ['kg', 'Kilogramm']], def: 'dona' },
     { k: 'price', t: 'number', label: 'Narxi (1 kg yoki 1 dona), so\'m', req: true },
     { k: 'old_price', t: 'number', label: 'Eski narx (chegirma % chiqadi)' },
@@ -1110,7 +1354,9 @@ function admBanners(box) {
     { k: 'style', t: 'select', label: 'Turi', opts: [['card', 'Promo karta'], ['block', 'Brend bloki']], def: 'card' },
     { k: 'image', t: 'image', label: 'Rasm' },
     { k: 'title', label: 'Sarlavha' }, { k: 'subtitle', label: 'Qo\'shimcha matn' },
-    { k: 'color', t: 'color', label: 'Blok rangi (brend bloki uchun)', def: '#e11d2a' },
+    { k: 'color', t: 'color', label: 'Fon rangi (karta / blok)', def: '#eaf6ec' },
+    { k: 'story_title', label: 'Istoriya sarlavhasi (masalan: Bonuslar)' },
+    { k: 'stories', t: 'stories', label: 'Istoriya slaydlari (bannerga bosilganda ochiladi)' },
     { k: 'link', t: 'select', label: 'Bog\'lash (bosilganda / blok mahsulotlari)', opts: linkOpts, def: 'none:' },
     { k: 'sort', t: 'number', label: 'Tartib', def: 0 },
     { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true },
@@ -1176,6 +1422,20 @@ function admSettings(box) {
     } catch (err) { toast(err.message, 'error'); }
   };
 }
+function storyRow(x) {
+  return `<div class="strow"><button type="button" class="stimg" data-stimg>${x.image ? `<img src="${e(x.image)}">` : ic('image-plus')}</button><input type="hidden" data-si value="${e(x.image || '')}">
+    <div class="stf"><input data-st placeholder="Sarlavha" value="${e(x.title || '')}"><input data-sx placeholder="Matn" value="${e(x.text || '')}"></div><button type="button" class="trash muted" data-strm>${ic('x')}</button></div>`;
+}
+function admRecipes(box) {
+  box.innerHTML = addBtn('addR', 'Retsept qo\'shish') + listRows(S.admin.recipes || [], (r) => `<button class="arow" data-id="${r.id}" style="${r.active ? '' : 'opacity:.4'}"><span class="thumb">${img(r.image, 'chef-hat')}</span><span class="tx">${e(r.title_uz)}<small>${(r.product_ids || []).length} ta mahsulot</small></span>${ic('pencil')}</button>`);
+  const form = (r) => formSheet('recipes', r, [
+    { k: 'image', t: 'image', label: 'Rasm' }, { k: 'title_uz', label: 'Nomi (o\'zbekcha)', req: true }, { k: 'title_ru', label: 'Nomi (ruscha)' },
+    { k: 'body_uz', t: 'textarea', label: 'Tayyorlanishi (o\'zbekcha)' }, { k: 'body_ru', t: 'textarea', label: 'Tayyorlanishi (ruscha)' },
+    { k: 'product_ids', t: 'products', label: 'Kerakli mahsulotlar' }, { k: 'sort', t: 'number', label: 'Tartib', def: 0 }, { k: 'active', t: 'switch', label: 'Ko\'rinadi', def: true },
+  ]);
+  $('#addR').onclick = () => form(null);
+  box.querySelectorAll('[data-id]').forEach((b) => b.onclick = () => form(S.admin.recipes.find((r) => r.id === Number(b.dataset.id))));
+}
 function formSheet(entity, item, fields, transform) {
   const val = (f) => (item && item[f.k] !== undefined && item[f.k] !== null ? item[f.k] : f.def ?? '');
   const html = sheetHead(item ? tr('edit') : 'Yangi') + fields.map((f) => {
@@ -1184,12 +1444,26 @@ function formSheet(entity, item, fields, transform) {
     if (f.t === 'select') return `<div class="field"><label>${f.label}</label><select data-k="${f.k}">${f.opts.map(([k, t]) => `<option value="${e(k)}" ${String(k) === String(v) ? 'selected' : ''}>${e(t)}</option>`).join('')}</select></div>`;
     if (f.t === 'switch') return `<div class="box" style="margin:0 0 10px"><div class="arow"><span class="tx">${f.label}</span><button class="switch ${v ? 'on' : ''}" data-sw="${f.k}"></button></div></div>`;
     if (f.t === 'textarea') return `<div class="field"><label>${f.label}</label><textarea data-k="${f.k}" rows="2">${e(v)}</textarea></div>`;
+    if (f.t === 'stories') return `<div class="field"><label>${f.label}</label><div id="stList">${(Array.isArray(v) ? v : []).map(storyRow).join('')}</div>
+      <button class="btn ghost sm" id="stAdd" type="button">${ic('plus')}Slayd qo'shish</button></div>`;
+    if (f.t === 'products') return `<div class="field"><label>${f.label}</label><div class="pchk">${S.admin.products.filter((x) => x.active).map((x) => `<label><input type="checkbox" data-pid="${x.id}" ${(v || []).includes(x.id) ? 'checked' : ''}> ${e(x.name_uz)}</label>`).join('')}</div></div>`;
     if (f.t === 'color') return `<div class="field"><label>${f.label}</label><input data-k="${f.k}" type="color" value="${e(v || '#e11d2a')}" style="padding:4px"></div>`;
     if (f.t === 'icon') return `<div class="field"><label>${f.label}</label><input type="hidden" data-k="${f.k}" value="${e(v)}"><div class="chips">${ICONS.map((n) => `<button class="chip ${v === 'lucide:' + n ? 'on' : ''}" data-icon="lucide:${n}" style="font-size:19px;height:40px">${ic(n)}</button>`).join('')}</div></div>`;
     return `<div class="field"><label>${f.label}${f.req ? ' *' : ''}</label><input data-k="${f.k}" ${f.t === 'number' ? `type="number" inputmode="decimal" step="${f.step || '1'}"` : ''} value="${e(v)}"></div>`;
   }).join('') + `<button class="btn" id="fSave">${tr('save')}</button>${item ? `<button class="btn danger" id="fDel" style="margin-top:4px">${ic('trash-2')}${tr('remove')}</button>` : ''}`;
   openSheet(html, (root) => {
     root.querySelectorAll('[data-sw]').forEach((s) => s.onclick = () => s.classList.toggle('on'));
+    const stAdd = $('#stAdd', root);
+    const bindStories = () => {
+      $$('[data-stimg]', root).forEach((b) => b.onclick = async () => {
+        const f = await pickFile(); if (!f) return;
+        b.innerHTML = '<div class="sk" style="width:100%;height:100%"></div>';
+        try { const { url } = await api('/api/admin/upload', { method: 'POST', body: { image: await resizeImage(f, 1000, 0.85) } }); b.closest('.strow').querySelector('[data-si]').value = url; b.innerHTML = `<img src="${e(url)}">`; }
+        catch (err) { toast(err.message, 'error'); b.innerHTML = ic('image-plus'); }
+      });
+      $$('[data-strm]', root).forEach((b) => b.onclick = () => b.closest('.strow').remove());
+    };
+    if (stAdd) { stAdd.onclick = () => { $('#stList', root).insertAdjacentHTML('beforeend', storyRow({})); bindStories(); }; bindStories(); }
     root.querySelectorAll('[data-icon]').forEach((b) => b.onclick = () => { root.querySelectorAll('[data-icon]').forEach((x) => x.classList.toggle('on', x === b)); b.closest('.field').querySelector('[data-k]').value = b.dataset.icon; });
     root.querySelectorAll('[data-img]').forEach((b) => b.onclick = async () => {
       const f = await pickFile(); if (!f) return;
@@ -1203,6 +1477,8 @@ function formSheet(entity, item, fields, transform) {
       let data = {};
       for (const f of fields) {
         if (f.t === 'switch') { data[f.k] = root.querySelector(`[data-sw="${f.k}"]`).classList.contains('on'); continue; }
+        if (f.t === 'stories') { data[f.k] = $$('.strow', root).map((r) => ({ image: $('[data-si]', r).value || null, title: $('[data-st]', r).value.trim(), text: $('[data-sx]', r).value.trim() })).filter((x) => x.title || x.image); continue; }
+        if (f.t === 'products') { data[f.k] = $$('[data-pid]:checked', root).map((x) => Number(x.dataset.pid)); continue; }
         let x = root.querySelector(`[data-k="${f.k}"]`).value.trim();
         if (f.req && !x) return toast(`${f.label} — to'ldiring`, 'error');
         if (f.t === 'number' || f.num) x = x === '' ? null : Number(x); else if (x === '') x = null;
@@ -1249,10 +1525,10 @@ async function boot() {
   const t0 = Date.now();
   try {
     const hasAuth = window.__mockApi || tg?.initData;
-    const [cat, me, cl] = await Promise.all([api('/api/catalog'), hasAuth ? api('/api/me').catch(() => null) : null, cloud.load(['cart'])]);
+    const [cat, me, cl] = await Promise.all([api('/api/catalog'), hasAuth ? api('/api/me').catch(() => null) : null, cloud.load(['cart', 'fav', 'list'])]);
     S.catalog = cat; S.me = me;
     if (cat.version && cat.version !== window.APP_VERSION && !window.__mockApi) checkVersion();
-    try { if (cl.cart) S.cart = JSON.parse(cl.cart); } catch {}
+    try { if (cl.cart) S.cart = JSON.parse(cl.cart); if (cl.fav) S.fav = JSON.parse(cl.fav); if (cl.list) S.list = JSON.parse(cl.list); } catch {}
     if (me?.lang && me.lang !== S.lang) { S.lang = me.lang; local.set('lang', me.lang); }
     applyTheme(); updateBadge();
     await new Promise((r) => setTimeout(r, Math.max(0, 650 - (Date.now() - t0))));
