@@ -488,7 +488,7 @@ function home(v) {
 function promoCard(b, i) {
   if (b.color) {
     return `<div class="promo press" data-story="${i}" style="background:${e(b.color)}"><div class="cap"><small>${e(b.subtitle || '')}</small><b>${e(b.title || '')}</b></div>
-      ${b.image ? `<img class="pimg lz" src="${e(b.image)}" alt="">` : ''}${storiesOf(b).length > 1 ? `<span class="pdots">${storiesOf(b).map(() => '<i></i>').join('')}</span>` : ''}</div>`;
+      ${b.image ? `<img class="pimg lz" src="${e(b.image)}" alt="">` : ''}${storiesOf(b).length ? `<span class="pplay">${ic('mdi:play')}${storiesOf(b).map(() => '<i></i>').join('')}</span>` : ''}</div>`;
   }
   return `<div class="promo press" data-story="${i}">${img(b.image, 'image')}${b.title ? `<div class="cap"><small>${e(b.subtitle || '')}</small><b>${e(b.title)}</b></div>` : ''}</div>`;
 }

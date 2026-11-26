@@ -519,3 +519,9 @@ img[src*="api.iconify.design"] { object-fit: contain !important; padding: 13%; }
 .stf input { width: 100%; background: var(--surface); border: 0; border-radius: 10px; padding: 8px 10px; font-size: 14px; }
 .pchk { max-height: 240px; overflow-y: auto; background: var(--surface); border-radius: 14px; padding: 8px 12px; }
 .pchk label { display: flex; gap: 8px; align-items: center; padding: 6px 0; font-size: 14px; color: var(--text); margin: 0; }
+
+.pplay { position: absolute; right: 12px; bottom: 12px; z-index: 2; display: flex; align-items: center; gap: 4px; height: 34px; padding: 0 12px 0 4px; border-radius: 17px; background: #111; box-shadow: 0 6px 14px rgba(0,0,0,.25); }
+.pplay iconify-icon { width: 26px; height: 26px; border-radius: 50%; background: #fff; color: #111; font-size: 16px; display: grid; place-items: center; margin-right: 4px; }
+.pplay i { width: 14px; height: 3px; border-radius: 3px; background: rgba(255,255,255,.55); }
+.pplay i:first-of-type { background: #fff; }
+.promo .pimg { bottom: 18px; }
