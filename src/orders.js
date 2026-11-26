@@ -7,13 +7,25 @@ const { priceLine } = require('./pricing');
 const fmt = (n) => Number(n || 0).toLocaleString('ru-RU').replace(/,/g, ' ');
 const esc = (s) => String(s ?? '').replace(/[<>&]/g, (c) => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
 
+// Daraja: jami xarid summasiga qarab (Bronza 1%, Kumush 2%, ...)
+function levelOf(coinsCfg, spent = 0) {
+  const lv = [...(coinsCfg.levels || [])].sort((a, b) => a.from - b.from);
+  let cur = lv[0] || { name: 'Bronza', pct: 1, from: 0 };
+  for (const l of lv) if (Number(spent) >= l.from) cur = l;
+  return cur;
+}
+
+function logCoins(user_id, delta, reason, order_id = null) {
+  return db.insert('coin_log', { user_id, delta, reason, order_id }).catch((e) => console.error('coin_log:', e.message));
+}
+
 async function getSetting(key, def) {
   const row = await db.one('settings', `key=eq.${db.enc(key)}`);
   return row ? row.value : def;
 }
 
 function lineLabel(l) {
-  if (l.reward) return `${l.value} × (🎁 ${l.coins} coin)`;
+  if (l.reward) return `${l.value} × (🎁 ${l.coins} ball)`;
   if (l.unit === 'dona') return `${l.value} dona`;
   if (l.mode === 'kg') return `${l.kg} kg`;
   if (l.mode === 'sum') return `${fmt(l.value)} so'mlik (~${l.kg} kg)`;
@@ -35,7 +47,7 @@ function adminText(o) {
     '',
     `Mahsulotlar: ${fmt(o.subtotal)} so'm`,
     o.delivery_fee ? `Yetkazish: ${fmt(o.delivery_fee)} so'm` : null,
-    o.coins_used ? `Coin bilan: −${o.coins_used} 🪙` : null,
+    o.coins_used ? `Sovg'a (ball): −${o.coins_used}` : null,
     `<b>Jami: ${fmt(o.total)} so'm</b>${hasEst ? ' (taxminiy, tortilgandan keyin aniqlanadi)' : ''}`,
     `To'lov: ${o.payment === 'cash' ? 'Naqd / kuryerga karta' : o.payment}`,
     '',
@@ -69,7 +81,7 @@ async function create(user, body) {
   const subtotal = lines.reduce((s, l) => s + l.total, 0);
   const coinsUsed = lines.reduce((s, l) => s + l.coins, 0);
   const delivery = await getSetting('delivery', { fee: 0, free_from: 0, min_order: 0 });
-  const coinsCfg = await getSetting('coins', { sum_per_coin: 1000, enabled: true });
+  const coinsCfg = await getSetting('coins', { enabled: true, levels: [] });
 
   if (subtotal > 0 && subtotal < (delivery.min_order || 0)) {
     throw new Error(`Minimal buyurtma: ${fmt(delivery.min_order)} so'm`);
@@ -77,11 +89,11 @@ async function create(user, body) {
   if (subtotal === 0 && !coinsUsed) throw new Error('Savat bo\'sh');
   const fee = delivery.free_from && subtotal >= delivery.free_from ? 0 : Number(delivery.fee || 0);
   const total = subtotal + fee;
-  const earned = coinsCfg.enabled && coinsCfg.sum_per_coin ? Math.floor(subtotal / coinsCfg.sum_per_coin) : 0;
+  const earned = coinsCfg.enabled ? Math.floor((subtotal * levelOf(coinsCfg, user.spent).pct) / 100) : 0;
 
   if (coinsUsed) {
     const left = await db.rpc('add_coins', { uid: user.id, delta: -coinsUsed });
-    if (left === null) throw new Error('Coin yetarli emas');
+    if (left === null) throw new Error('Ball yetarli emas');
   }
 
   const order = await db.insert('orders', {
@@ -100,6 +112,8 @@ async function create(user, body) {
     address: String(body.address ?? user.address ?? '').slice(0, 200),
     comment: String(body.comment || '').slice(0, 300),
   });
+
+  if (coinsUsed) logCoins(user.id, -coinsUsed, 'gift', order.id);
 
   // Mijozga va adminlarga xabar
   tg.call('sendMessage', { chat_id: user.id, text: t(user.lang).orderPlaced(order.id), parse_mode: 'HTML' });
@@ -133,12 +147,17 @@ async function setStatus(id, status) {
   const tx = t(user?.lang);
   await tg.call('sendMessage', { chat_id: o.user_id, text: `🧾 #${o.id}: ${tx.status[status]}` });
 
-  if (status === 'done' && o.coins_earned > 0) {
-    await db.rpc('add_coins', { uid: o.user_id, delta: o.coins_earned });
-    tg.call('sendMessage', { chat_id: o.user_id, text: tx.coinsEarned(o.coins_earned), parse_mode: 'HTML' });
+  if (status === 'done') {
+    if (user) await db.update('users', `id=eq.${o.user_id}`, { spent: Number(user.spent || 0) + o.subtotal });
+    if (o.coins_earned > 0) {
+      await db.rpc('add_coins', { uid: o.user_id, delta: o.coins_earned });
+      logCoins(o.user_id, o.coins_earned, 'order', o.id);
+      tg.call('sendMessage', { chat_id: o.user_id, text: tx.coinsEarned(o.coins_earned), parse_mode: 'HTML' });
+    }
   }
   if (status === 'cancelled' && o.coins_used > 0) {
     await db.rpc('add_coins', { uid: o.user_id, delta: o.coins_used });
+    logCoins(o.user_id, o.coins_used, 'refund', o.id);
   }
 
   for (const m of upd.admin_msg || []) {
@@ -150,4 +169,4 @@ async function setStatus(id, status) {
   return upd;
 }
 
-module.exports = { create, setStatus, getSetting };
+module.exports = { create, setStatus, getSetting, levelOf, logCoins };

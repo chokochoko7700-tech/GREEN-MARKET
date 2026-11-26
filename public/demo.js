@@ -1,50 +1,59 @@
 // Faqat ?demo=1 bilan ochilganda: serverga ulanmasdan dizaynni ko'rish uchun
 (() => {
-  const svg = (bg, txt) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${bg[0]}"/><stop offset="1" stop-color="${bg[1]}"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g)"/><text x="60" y="330" font-family="sans-serif" font-size="90" font-weight="800" fill="#fff">${txt}</text></svg>`);
-  const pimg = (emo, bg) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="100%" height="100%" fill="${bg}"/><text x="50%" y="58%" font-size="190" text-anchor="middle">${emo}</text></svg>`);
+  const pimg = (emo, bg) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400"><rect width="100%" height="100%" fill="${bg}"/><text x="50%" y="60%" font-size="200" text-anchor="middle">${emo}</text></svg>`);
+  const ban = (a, b, t) => 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="820" height="400"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="100%" height="100%" fill="url(#g)"/><text x="600" y="270" font-size="190" text-anchor="middle">${t}</text></svg>`);
+  const P = (id, category_id, name_uz, unit, price, emo, bg, extra = {}) => ({ id, category_id, name_uz, unit, price, image: pimg(emo, bg), in_stock: true, active: true, min_kg: 0.1, ...extra });
   const D = {
-    me: { id: 1, name: 'Ali', phone: '+998901234567', lat: 39.0573, lng: 66.8341, address: 'Ipak yo\'li 12', lang: 'uz', theme: 'auto', coins: 37, is_admin: true },
+    me: { id: 777, name: 'Aslbek', phone: '+998904447604', lat: 39.0573, lng: 66.8341, address: 'Ipak yo\'li 12', lang: 'uz', theme: 'light', coins: 1250, spent: 1200000, is_admin: true, birthday: null },
     catalog: {
       version: window.APP_VERSION,
-      settings: { shop: { name: 'Green Market', phone: '+998901112233', work_hours: '08:00–23:00' }, delivery: { fee: 5000, free_from: 100000, min_order: 0 }, coins: { sum_per_coin: 1000, enabled: true }, banner: { interval_ms: 1000 } },
+      settings: {
+        shop: { name: 'Green Market', phone: '+998901112233', work_hours: '08:00–23:00' }, delivery: { fee: 5000, free_from: 100000, min_order: 0 },
+        coins: { enabled: true, birthday_bonus: 5000, levels: [{ name: 'Bronza', pct: 1, from: 0 }, { name: 'Kumush', pct: 2, from: 3000000 }, { name: 'Oltin', pct: 3, from: 10000000 }] },
+        banner: { interval_ms: 3000 }, info: { about: 'Green Market — Shahrisabzdagi do\'kon.' },
+      },
       categories: [
-        { id: 1, name_uz: 'Meva-sabzavot', icon: 'solar:leaf-bold-duotone' },
-        { id: 2, name_uz: 'Ichimliklar', icon: 'solar:bottle-bold-duotone' },
-        { id: 3, name_uz: 'Sut mahsulotlari', icon: 'solar:cup-hot-bold-duotone' },
-        { id: 4, name_uz: 'Shirinliklar', icon: 'solar:donut-bitten-bold-duotone' },
-        { id: 5, name_uz: 'Maishiy', icon: 'solar:washing-machine-bold-duotone' },
+        { id: 1, name_uz: 'Sabzavotlar', grp: 'Sabzavotlar bo\'limi', image: pimg('🥦', '#eef7ee'), icon: 'lucide:carrot' },
+        { id: 8, name_uz: 'Mevalar va rezavorlar', grp: 'Sabzavotlar bo\'limi', image: pimg('🍌', '#fff7e0'), icon: 'lucide:apple' },
+        { id: 2, name_uz: 'Ichimliklar', grp: 'Suv va ichimliklar', image: pimg('🥤', '#ffecec'), icon: 'lucide:cup-soda' },
+        { id: 3, name_uz: 'Sut, yog\' va tuxum', grp: 'Sut mahsulotlari', image: pimg('🥛', '#eef3fb'), icon: 'lucide:milk' },
+        { id: 9, name_uz: 'Pishloqlar', grp: 'Sut mahsulotlari', image: pimg('🧀', '#fff6db'), icon: 'lucide:egg' },
+        { id: 4, name_uz: 'Sneklar', grp: 'Shirinliklar va gazaklar', image: pimg('🍿', '#fff0e6'), icon: 'lucide:cookie' },
       ],
       banners: [
-        { id: 1, image: svg(['#17a34a', '#0f5132'], 'Meva −20%'), title: 'Yangi mevalar', subtitle: 'Bugun chegirmada', link_type: 'category', link_id: 1 },
-        { id: 2, image: svg(['#f59e0b', '#b45309'], 'Coin x2'), title: 'Ikki barobar coin', subtitle: 'Hafta oxirigacha', link_type: 'product', link_id: 4 },
-        { id: 3, image: svg(['#2563eb', '#1e3a8a'], 'Bepul yetkazish'), title: '100 000 so\'mdan', subtitle: '', link_type: 'none' },
+        { id: 1, style: 'card', image: ban('#e8f5e9', '#c8e6c9', '🛒'), title: 'Bonus to\'plang', subtitle: 'Har bir xariddan ball', link_type: 'none' },
+        { id: 2, style: 'card', image: ban('#fff3e0', '#ffe0b2', '🍊'), title: 'Har tong yangi', subtitle: 'Meva-sabzavot', link_type: 'category', link_id: 1 },
+        { id: 3, style: 'block', color: '#e11d2a', image: pimg('🥤', '#e11d2a'), title: 'Coca‑Cola', subtitle: 'Coca‑Cola 1,5 L', link_type: 'category', link_id: 2 },
       ],
       products: [
-        { id: 1, category_id: 1, name_uz: 'Piyoz', unit: 'kg', price: 7000, piece_kg: 0.2, min_kg: 0.1, in_stock: true, active: true, popular: true, image: pimg('🧅', '#fdf3e7') },
-        { id: 2, category_id: 1, name_uz: 'Kartoshka', unit: 'kg', price: 6000, piece_kg: 0.2, min_kg: 0.1, in_stock: true, active: true, old_price: 7500, popular: true, image: pimg('🥔', '#f5efe6') },
-        { id: 3, category_id: 1, name_uz: 'Olma', unit: 'kg', price: 15000, piece_kg: 0.25, min_kg: 0.1, in_stock: true, active: true, coin_price: 30, popular: true, image: pimg('🍎', '#fdeaea') },
-        { id: 4, category_id: 2, name_uz: 'Coca-Cola 1.5 L', unit: 'dona', price: 12000, in_stock: true, active: true, coin_price: 25, popular: true, image: pimg('🥤', '#ffe9e9') },
-        { id: 5, category_id: 2, name_uz: 'Suv 1 L', unit: 'dona', price: 3000, in_stock: true, active: true, coin_price: 8, image: pimg('💧', '#e8f3ff') },
-        { id: 6, category_id: 3, name_uz: 'Sut 1 L', unit: 'dona', price: 11000, in_stock: false, active: true, image: pimg('🥛', '#f1f5f9') },
-        { id: 7, category_id: 2, name_uz: 'Apelsin sharbati 1 L', unit: 'dona', price: 16000, in_stock: true, active: true, image: pimg('🧃', '#fff4dc') },
+        P(1, 1, 'Piyoz', 'kg', 7000, '🧅', '#fdf3e7', { piece_kg: 0.2, popular: true }),
+        P(2, 1, 'Kartoshka', 'kg', 6000, '🥔', '#f5efe6', { piece_kg: 0.2, old_price: 7500 }),
+        P(3, 8, 'Olma Golden', 'kg', 15000, '🍎', '#fdeaea', { piece_kg: 0.25, coin_price: 3000, popular: true }),
+        P(10, 8, 'Banan', 'kg', 22000, '🍌', '#fff7d6', { piece_kg: 0.2 }),
+        P(4, 2, 'Coca-Cola 1,5 L', 'dona', 12000, '🥤', '#ffe9e9', { coin_price: 2500, popular: true }),
+        P(5, 2, 'Suv 1 L', 'dona', 3000, '💧', '#e8f3ff'),
+        P(7, 2, 'Apelsin sharbati 1 L', 'dona', 16000, '🧃', '#fff4dc', { old_price: 19000 }),
+        P(6, 3, 'Sut 1 L', 'dona', 11000, '🥛', '#f1f5f9', { in_stock: false }),
+        P(11, 9, 'Pishloq Gauda 200 g', 'dona', 28000, '🧀', '#fff6db', { popular: true }),
+        P(12, 4, 'Chips 70 g', 'dona', 12950, '🍟', '#fff0e6', { old_price: 14990 }),
       ],
-      faq: [{ id: 1, q_uz: 'Yetkazib berish qancha vaqt oladi?', a_uz: 'Odatda 30–60 daqiqa.' }],
+      faq: [{ id: 1, q_uz: 'Ballar qanday to\'planadi?', a_uz: 'Har bir yetkazilgan buyurtmadan darajangizga qarab ball tushadi.' }, { id: 2, q_uz: 'Daraja nima va u qanday oshadi?', a_uz: 'Jami xaridingiz oshgani sari daraja ko\'tariladi.' }],
+      stores: [{ id: 1, name: 'Lipton Green Market', address: 'Shahrisabz, Ipak yo\'li', lat: 39.0573, lng: 66.8341, hours: '08:00–23:00' }, { id: 2, name: 'Green Market 2', address: 'Markaz', lat: 39.062, lng: 66.828, hours: '09:00–22:00' }],
     },
-    orders: [],
+    orders: [{ id: 101, status: 'delivering', created_at: new Date().toISOString(), total: 27000, coins_earned: 220, items: [{ name: 'Piyoz', unit: 'kg', mode: 'kg', kg: 1, value: 1, total: 7000 }, { name: 'Coca-Cola 1,5 L', unit: 'dona', mode: 'dona', value: 1, total: 12000 }] }],
+    coins: [{ delta: 220, reason: 'order', order_id: 99, created_at: new Date().toISOString() }, { delta: -2500, reason: 'gift', order_id: 98, created_at: new Date().toISOString() }],
   };
   window.__mockApi = async (path, method, body) => {
-    await new Promise((r) => setTimeout(r, 250));
+    await new Promise((r) => setTimeout(r, 200));
     if (path === '/api/catalog') return D.catalog;
     if (path === '/api/me' && method === 'GET') return D.me;
-    if (path === '/api/me') return Object.assign(D.me, body, body?.avatar ? { avatar: body.avatar } : {});
-    if (path === '/api/orders' && method === 'POST') {
-      const o = { id: 100 + D.orders.length, status: 'new', created_at: new Date().toISOString(), total: 0, items: [] };
-      D.orders.unshift(o); return o;
-    }
+    if (path === '/api/me') return Object.assign(D.me, body);
+    if (path === '/api/orders' && method === 'POST') return { id: 102 };
     if (path === '/api/orders') return D.orders;
+    if (path === '/api/coins') return D.coins;
     if (path === '/api/admin/all') return D.catalog;
-    if (path.startsWith('/api/admin/orders')) return D.orders;
-    if (path === '/api/admin/stats') return { today_orders: D.orders.length, today_sum: 0, users: 1 };
+    if (path.startsWith('/api/admin/orders')) return D.orders.map((o) => ({ ...o, status: 'new', name: 'Aslbek', phone: '+998904447604', address: 'Ipak yo\'li 12', lat: 39.05, lng: 66.83 }));
+    if (path === '/api/admin/stats') return { today_orders: 3, today_sum: 154000, users: 42 };
     return { ok: true };
   };
 })();

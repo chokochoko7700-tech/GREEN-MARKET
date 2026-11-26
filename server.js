@@ -102,10 +102,26 @@ const pick = (obj, keys) => Object.fromEntries(keys.filter((k) => obj[k] !== und
 
 const ADMIN_TABLES = {
   products: ['category_id', 'name_uz', 'name_ru', 'desc_uz', 'desc_ru', 'image', 'unit', 'price', 'old_price', 'piece_kg', 'min_kg', 'coin_price', 'popular', 'in_stock', 'sort', 'active'],
-  categories: ['name_uz', 'name_ru', 'icon', 'image', 'sort', 'active'],
-  banners: ['image', 'title', 'subtitle', 'link_type', 'link_id', 'sort', 'active'],
+  categories: ['name_uz', 'name_ru', 'grp', 'icon', 'image', 'sort', 'active'],
+  banners: ['image', 'title', 'subtitle', 'link_type', 'link_id', 'style', 'color', 'sort', 'active'],
+  stores: ['name', 'address', 'lat', 'lng', 'hours', 'phone', 'sort', 'active'],
   faq: ['q_uz', 'a_uz', 'q_ru', 'a_ru', 'sort'],
 };
+
+// Tug'ilgan kunda yiliga bir marta bonus ball
+async function birthdayBonus(user) {
+  if (!user.birthday || user.via_admin_bot) return user;
+  const now = new Date(Date.now() + 5 * 3600 * 1000); // Toshkent vaqti
+  const md = now.toISOString().slice(5, 10);
+  if (String(user.birthday).slice(5, 10) !== md || user.bday_year === now.getUTCFullYear()) return user;
+  const coins = (await orders.getSetting('coins', {})).birthday_bonus || 0;
+  if (!coins) return user;
+  const upd = await db.update('users', `id=eq.${user.id}&or=(bday_year.is.null,bday_year.neq.${now.getUTCFullYear()})`, { bday_year: now.getUTCFullYear() });
+  if (!upd) return user;
+  const bal = await db.rpc('add_coins', { uid: user.id, delta: coins });
+  orders.logCoins(user.id, coins, 'birthday');
+  return { ...user, coins: bal ?? user.coins + coins, bday_year: now.getUTCFullYear(), birthday_gift: coins };
+}
 
 async function loadSettings() {
   const rows = await db.select('settings', 'select=key,value');
@@ -128,26 +144,27 @@ async function api(req, res, pathname, query) {
   if (pathname === '/api/version') return json(res, 200, { version: cfg.VERSION });
 
   if (pathname === '/api/catalog' && method === 'GET') {
-    const [categories, products, banners, faq, settings] = await Promise.all([
+    const [categories, products, banners, faq, settings, stores] = await Promise.all([
       db.select('categories', 'active=eq.true&order=sort.asc,id.asc'),
       db.select('products', 'active=eq.true&order=sort.asc,id.asc'),
       db.select('banners', 'active=eq.true&order=sort.asc,id.asc'),
       db.select('faq', 'order=sort.asc,id.asc'),
       loadSettings(),
-    ]);
-    return json(res, 200, { categories, products, banners, faq, settings, version: cfg.VERSION });
+      db.select('stores', 'active=eq.true&order=sort.asc,id.asc'),
+    ]).then((r) => r);
+    return json(res, 200, { categories, products, banners, faq, settings, stores, version: cfg.VERSION });
   }
 
   const user = await auth(req);
 
-  if (pathname === '/api/me' && method === 'GET') return json(res, 200, user);
+  if (pathname === '/api/me' && method === 'GET') return json(res, 200, await birthdayBonus(user));
   if (user.via_admin_bot && !pathname.startsWith('/api/admin/')) {
     throw Object.assign(new Error('Admin panel faqat admin bo\'limi uchun'), { code: 403 });
   }
 
   if (pathname === '/api/me' && method === 'PATCH') {
     const b = await readBody(req);
-    const patch = pick(b, ['name', 'phone', 'lat', 'lng', 'address', 'lang', 'theme']);
+    const patch = pick(b, ['name', 'phone', 'lat', 'lng', 'address', 'lang', 'theme', 'birthday', 'notify_promo']);
     if (patch.name !== undefined) patch.name = String(patch.name).trim().slice(0, 60) || null;
     if (patch.phone !== undefined) {
       const p = String(patch.phone).replace(/[^\d+]/g, '');
@@ -157,10 +174,20 @@ async function api(req, res, pathname, query) {
     if (patch.lang && !['uz', 'ru'].includes(patch.lang)) delete patch.lang;
     if (patch.theme && !['auto', 'light', 'dark'].includes(patch.theme)) delete patch.theme;
     if (patch.address !== undefined) patch.address = String(patch.address).slice(0, 200);
+    if (patch.birthday !== undefined) {
+      if (patch.birthday && !/^\d{4}-\d{2}-\d{2}$/.test(patch.birthday)) delete patch.birthday;
+      else if (user.birthday) delete patch.birthday; // tug'ilgan kun bir marta kiritiladi
+      else patch.birthday = patch.birthday || null;
+    }
+    if (patch.notify_promo !== undefined) patch.notify_promo = Boolean(patch.notify_promo);
     if (b.avatar) patch.avatar = await saveImage(b.avatar, 'avatars');
     if (b.avatar === null) patch.avatar = null;
     const upd = await db.update('users', `id=eq.${user.id}`, patch);
     return json(res, 200, { ...upd, is_admin: user.is_admin });
+  }
+
+  if (pathname === '/api/coins' && method === 'GET') {
+    return json(res, 200, await db.select('coin_log', `user_id=eq.${user.id}&order=created_at.desc&limit=100`));
   }
 
   if (pathname === '/api/orders' && method === 'GET') {
@@ -194,14 +221,15 @@ async function api(req, res, pathname, query) {
     const [, , entity, id] = parts;
 
     if (entity === 'all' && method === 'GET') {
-      const [categories, products, banners, faq, settings] = await Promise.all([
+      const [categories, products, banners, faq, settings, stores] = await Promise.all([
         db.select('categories', 'order=sort.asc,id.asc'),
         db.select('products', 'order=sort.asc,id.asc'),
         db.select('banners', 'order=sort.asc,id.asc'),
         db.select('faq', 'order=sort.asc,id.asc'),
         loadSettings(),
+        db.select('stores', 'order=sort.asc,id.asc'),
       ]);
-      return json(res, 200, { categories, products, banners, faq, settings });
+      return json(res, 200, { categories, products, banners, faq, settings, stores });
     }
 
     if (entity === 'orders' && method === 'GET') {

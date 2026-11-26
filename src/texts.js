@@ -21,7 +21,7 @@ const T = {
       cancelled: '❌ Buyurtmangiz bekor qilindi',
     },
     orderPlaced: (id) => `🧾 Buyurtma <b>#${id}</b> qabul qilindi! Holati haqida shu yerda xabar beramiz.`,
-    coinsEarned: (c) => `🪙 Sizga <b>+${c} coin</b> qo'shildi!`,
+    coinsEarned: (c) => `🪙 Hisobingizga <b>+${c} ball</b> tushdi!`,
   },
   ru: {
     hello: (n) => `Здравствуйте, ${n}! 👋\nДобро пожаловать в онлайн-магазин <b>Green Market</b>.\n\nДля доставки сначала отправьте <b>вашу локацию</b> 👇`,
@@ -44,7 +44,7 @@ const T = {
       cancelled: '❌ Заказ отменён',
     },
     orderPlaced: (id) => `🧾 Заказ <b>#${id}</b> принят! О статусе сообщим здесь.`,
-    coinsEarned: (c) => `🪙 Вам начислено <b>+${c} коинов</b>!`,
+    coinsEarned: (c) => `🪙 Вам начислено <b>+${c} баллов</b>!`,
   },
 };
 
